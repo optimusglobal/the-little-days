@@ -80,3 +80,8 @@ Tài liệu chính thức: https://github.com/microsoft/playwright-mcp ; https:/
 Ngày kiểm thử, browser_file_upload trả `DOM.setFileInputFiles: Not allowed`; thư mục dự án đã được cấu hình đúng. Cần chủ máy mở Chrome Extensions → Playwright Extension → Details → bật **Allow access to file URLs / Cho phép truy cập vào các URL của tệp** cho riêng extension này. Không dùng cờ tắt kiểm tra toàn bộ extension. Sau đó chạy prepare-only lại.
 
 Nguồn xác nhận bởi maintainer Microsoft: https://github.com/microsoft/playwright-mcp/issues/1481 . Chưa coi upload/submit job mới là đã test đạt trước khi xác minh ảnh thật trong composer.
+
+
+## Kết quả kiểm thử sau khi bật quyền file
+
+Đã chạy thành công prepare trên Chrome máy Mia: upload Frame 0 có preview `attachment` đã load, nội dung editor trùng prompt canonical, model Argon, tỷ lệ Dọc 9:16. Trạng thái `prepared`, chưa submit job mới. Job IDEA_001 cũ đã download; không tạo lại trong lượt kiểm tra này. Giữ phân biệt chuẩn bị thành công với chuỗi render mới đã hoàn tất.
