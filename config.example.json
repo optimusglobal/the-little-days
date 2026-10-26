@@ -1,0 +1,18 @@
+{
+  "spreadsheet_id": "1MfErcyvRQSWS7kABIyq3_ljzI1keZ4HRl1Ngh3n-Cag",
+  "tab": "01_SAN_XUAT",
+  "header_row": 4,
+  "headers": {
+    "idea": "Idea mới",
+    "hook": "Ý tưởng / Hook",
+    "insight": "Insight",
+    "angle": "Proposed Angle — US",
+    "script": "Kịch bản / Storyboard",
+    "frame": "Frame 0",
+    "prompt": "Prompt video",
+    "reference": "Ảnh tham chiếu",
+    "service": "AI tạo video",
+    "mode": "Chế độ / điểm dừng"
+  },
+  "workers": {}
+}
