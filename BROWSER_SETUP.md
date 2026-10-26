@@ -74,3 +74,9 @@ python -m unittest discover -s tests -v
 ```
 
 Tài liệu chính thức: https://github.com/microsoft/playwright-mcp ; https://developers.google.com/workspace/sheets/api/guides/values
+
+## Blocker upload đã quan sát trên Mia
+
+Ngày kiểm thử, browser_file_upload trả `DOM.setFileInputFiles: Not allowed`; thư mục dự án đã được cấu hình đúng. Cần chủ máy mở Chrome Extensions → Playwright Extension → Details → bật **Allow access to file URLs / Cho phép truy cập vào các URL của tệp** cho riêng extension này. Không dùng cờ tắt kiểm tra toàn bộ extension. Sau đó chạy prepare-only lại.
+
+Nguồn xác nhận bởi maintainer Microsoft: https://github.com/microsoft/playwright-mcp/issues/1481 . Chưa coi upload/submit job mới là đã test đạt trước khi xác minh ảnh thật trong composer.
