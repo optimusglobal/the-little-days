@@ -196,7 +196,7 @@ class Job:
                   qc='pending', provenance='Existing result; original upload association needs human/AI review')
 
     def prepare(self):
-        if self.state['status'] != 'new':
+        if self.state['status'] not in ('new', 'awaiting_extension_file_permission'):
             raise Blocked('Job already exists; resume it instead of making another chat')
         page = self.client.page()
         if urlsplit(page['url']).path != '/app':
@@ -227,7 +227,11 @@ class Job:
         if not any(b['label'] and '9:16' in b['label'] for b in page['buttons']):
             raise Blocked('9:16 selection was not confirmed')
         self.client.click('button[aria-label="Tải tệp lên"]')
-        self.client.call('browser_file_upload', {'paths': [str(Path(self.packet['frame_path']).resolve())]})
+        try:
+            self.client.call('browser_file_upload', {'paths': [str(Path(self.packet['frame_path']).resolve())]})
+        except Blocked:
+            self.save(status='awaiting_extension_file_permission', blocker='Upload failed; check Playwright extension Allow access to file URLs and project roots')
+            raise Blocked('Upload blocked. Enable Allow access to file URLs for Playwright Extension in Chrome, then prepare again; no job submitted')
         self.client.call('browser_type', {'target': '[role="textbox"][contenteditable="true"]',
                                           'text': self.packet['prompt'], 'submit': False})
         self.save(status='prepared', opening_url=self.client.page()['url'],
