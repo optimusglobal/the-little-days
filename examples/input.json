@@ -1,0 +1,42 @@
+{
+  "headers": [
+    "Mã idea nội bộ",
+    "Link video gốc",
+    "Idea mới",
+    "Ý tưởng / Hook",
+    "Insight",
+    "Proposed Angle — US",
+    "Mã idea từ tool",
+    "DUYỆT",
+    "Hook",
+    "Kịch bản / Storyboard",
+    "ADMIN DUYỆT",
+    "Ảnh tham chiếu",
+    "Frame 0",
+    "Prompt video",
+    "AI tạo video",
+    "Phiên bản",
+    "Chế độ / điểm dừng"
+  ],
+  "rows": [
+    [
+      "DEMO_ONLY",
+      "https://example.invalid/source.mp4",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "FALSE",
+      "",
+      "",
+      "FALSE",
+      "https://example.invalid/reference.png",
+      "",
+      "",
+      "Gemini",
+      "",
+      "Làm đến video"
+    ]
+  ]
+}
