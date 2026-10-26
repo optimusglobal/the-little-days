@@ -231,3 +231,14 @@ Mỗi idea cần lưu: mã nội bộ; nguồn và phiên bản; quan sát/giớ
 5. Chọn bước chưa hoàn tất sớm nhất, tránh làm lại việc đã đạt.
 6. Tiến hành trong phạm vi tới video thật, không chờ checkbox admin.
 7. Giao tài sản có thật, ghi blocker và bước tiếp theo nếu chưa xong; không tuyên bố các tích hợp chưa được kiểm chứng.
+
+
+## 13. Cập nhật triển khai v0.2 — 27/10/2026
+
+- GitHub đã kết nối repo riêng tư `optimusglobal/the-little-days`; WL này được lưu phiên bản bằng commit. Chat thay đổi chưa tự đồng bộ file/skill/code.
+- Action đọc thử Sheets đã chạy thành công với `eligible_rows: 1`; không có lịch render mới.
+- Commander đã kết nối máy Mia. Playwright MCP/extension đã đọc được tab Gemini đang đăng nhập và thao tác nút tải video.
+- Kết quả IDEA_001 trong conversation `14db0bc9fa718837` có video thật: DOM báo 720×1280, 10.005 giây; đã tải MP4 về Downloads. Chưa QA nội dung/thoại/phụ đề; không coi là final đạt.
+- Bổ sung code `browser_video.py`, `export_browser_packet.py`, `run_browser.py`, `start-browser.cmd` và hướng dẫn `BROWSER_SETUP.md`: xử lý hàng đã có Frame 0/prompt, hash ảnh L/M, một prompt, giữ job khi lỗi, tải raw và QA pending.
+- Chưa chứng minh một job mới đi trọn upload → submit → render → download bằng bộ code. Worker các bước phân tích/biên kịch/tạo ảnh/review trong runner và adapter Grok vẫn chưa kết nối tự động. Tiếp tục theo hồ sơ thực thi, không gửi lại job IDEA_001 đã có kết quả.
+- Playwright phải khởi động trong thư mục dự án để upload chỉ trong phạm vi đó. Không mở quyền file toàn máy hoặc cổng Internet. Giữ xác nhận kết nối tab của extension.
