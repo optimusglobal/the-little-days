@@ -36,7 +36,7 @@ def main():
             job.download(Path.home()/'Downloads',args.output)
         elif args.conversation:
             job.adopt(args.conversation)
-        elif job.state['status']=='new':
+        elif job.state['status'] in ('new','awaiting_extension_file_permission'):
             job.prepare()
         if args.prepare_only:
             print(json.dumps({'status':job.state['status'],'record':str(job.path)}))
