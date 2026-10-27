@@ -242,3 +242,20 @@ Mỗi idea cần lưu: mã nội bộ; nguồn và phiên bản; quan sát/giớ
 - Bổ sung code `browser_video.py`, `export_browser_packet.py`, `run_browser.py`, `start-browser.cmd` và hướng dẫn `BROWSER_SETUP.md`: xử lý hàng đã có Frame 0/prompt, hash ảnh L/M, một prompt, giữ job khi lỗi, tải raw và QA pending.
 - Chưa chứng minh một job mới đi trọn upload → submit → render → download bằng bộ code. Worker các bước phân tích/biên kịch/tạo ảnh/review trong runner và adapter Grok vẫn chưa kết nối tự động. Tiếp tục theo hồ sơ thực thi, không gửi lại job IDEA_001 đã có kết quả.
 - Playwright phải khởi động trong thư mục dự án để upload chỉ trong phạm vi đó. Không mở quyền file toàn máy hoặc cổng Internet. Giữ xác nhận kết nối tab của extension.
+
+
+## 14. Chỉ dẫn ưu tiên — Gemini quyết định idea cuối cùng (27/10/2026)
+
+Phần này thay thế mọi chỉ dẫn cũ mâu thuẫn về quyền quyết định idea và chat kiểm duyệt. Chủ dự án đã xác nhận cho phép lưu cập nhật này vào GitHub.
+
+- ChatGPT viết bản nháp Idea mới sau khi phân tích nguồn. Chưa chuyển sang sản xuất tiếp theo cho tới khi Gemini thật kiểm duyệt và chốt.
+- Chỉ sử dụng đúng conversation do chủ dự án chỉ định: https://gemini.google.com/app/28109bf28700e364 . Kiểm tra URL thực tế trước mỗi lần gửi; không tự mở chat mới hoặc dùng conversation khác thay thế.
+- Gửi nguồn, quan sát và giới hạn xác minh audio, bản Idea mới cùng nội dung liên quan để Gemini quyết định: DÙNG / SỬA / KHÔNG DÙNG. Thiếu bằng chứng thì giữ pending.
+- Nếu SỬA, chính Gemini viết lại đầy đủ Idea mới và các trường nội dung bị ảnh hưởng. Ghi nguyên văn bản Gemini chốt vào đúng hàng/cột hiện tại trên Sheets. ChatGPT có thể thao tác ghi thay khi Gemini không có quyền ghi trực tiếp, nhưng không tự biên tập lại hoặc tuyên bố Gemini đã trực tiếp sửa Sheets.
+- Nếu KHÔNG DÙNG, lưu kết luận và lý do, không triển khai idea đó. Bản thay thế cũng phải được Gemini chốt.
+- Quyết định biên tập của Gemini là quyết định cuối cùng trong phạm vi yêu cầu chủ dự án; ChatGPT không ghi đè bằng đánh giá riêng. Hết vòng sửa mà chưa chốt thì giữ pending, không tự coi là được duyệt.
+- Lưu phản hồi thật, URL conversation, phiên bản và nội dung cuối trong hồ sơ thực thi. Không thêm cột hoặc sửa checkbox admin.
+- Áp dụng cho IDEA_002 đang dang dở và các idea tiếp theo; giữ nguyên các bước đã hoàn tất không bị ảnh hưởng.
+- Ảnh tham chiếu duy nhất cho toàn bộ nhân vật là L5, kể cả các hàng idea khác; L6 trống không phải blocker.
+- Giữ đầy đủ thoại và thời gian diễn; mục tiêu video mới hay hơn hoặc ít nhất ngang video nguồn. Không cắt thoại để ép thời lượng. Nếu Gemini không đủ thời lượng, chia hai video khi có thể giữ đầy đủ thoại và liên tục; hỏi chủ dự án trước khi đổi sang Grok.
+- Khi cần chủ dự án phản hồi, cung cấp lựa chọn bấm có sẵn thay vì yêu cầu gõ.
