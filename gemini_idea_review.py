@@ -1,5 +1,5 @@
-"""Gemini API idea review. No browser; no automatic retry or sheet writes."""
-import argparse, base64, hashlib, json, os, re, sys
+"""Gemini API idea review. No browser; bounded retries for explicit transient HTTP errors; no sheet writes."""
+import argparse, base64, hashlib, json, os, random, re, sys, time
 from pathlib import Path
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError
@@ -33,12 +33,45 @@ def key():
                 if v: break
     if not v: raise ValueError('API key not configured')
     return v
-def api(path, body=None):
+def error_info(exc):
+    try:
+        payload=json.loads(exc.read().decode('utf-8',errors='replace'))
+        error=payload.get('error',{})
+        message=str(error.get('message','')).replace(key(),'[REDACTED]')[:2000]
+        return {'http_status':exc.code,'status':error.get('status'),'message':message}
+    except Exception:
+        return {'http_status':exc.code,'status':'UNKNOWN','message':'Error body unavailable'}
+def retry_delay(attempt, retry_after=None):
+    delay=min(30.0,5.0*(2**attempt))+random.uniform(0,1)
+    if retry_after:
+        try:
+            requested=max(0.0,float(retry_after))
+            if requested>60: return None
+            delay=max(delay,requested)
+        except ValueError:
+            return None
+    return delay
+def api(path, body=None, error_log=None, attempts=4):
     headers={'x-goog-api-key':key()}
     if body is not None: headers['Content-Type']='application/json'
-    req=Request('https://generativelanguage.googleapis.com/v1beta/'+path,
-                data=None if body is None else json.dumps(body).encode(),headers=headers)
-    with urlopen(req,timeout=180) as res: return json.load(res)
+    encoded=None if body is None else json.dumps(body).encode()
+    errors=[]
+    for attempt in range(attempts):
+        req=Request('https://generativelanguage.googleapis.com/v1beta/'+path,
+                    data=encoded,headers=headers)
+        try:
+            with urlopen(req,timeout=180) as res: return json.load(res)
+        except HTTPError as exc:
+            info=error_info(exc); info['attempt']=attempt+1
+            delay=retry_delay(attempt,exc.headers.get('Retry-After')) if exc.code in (500,502,503,504) else None
+            info['retry_delay_seconds']=delay if attempt+1<attempts else None
+            errors.append(info)
+            if error_log: write(error_log,{'errors':errors})
+            print(json.dumps({'http_status':exc.code,'attempt':attempt+1,
+                              'retrying':delay is not None and attempt+1<attempts}),flush=True)
+            if delay is None or attempt+1>=attempts: raise
+            time.sleep(delay)
+    raise RuntimeError('Retry budget exhausted')
 def validate(r):
     if r.get('verdict') not in ('use','revise','reject','insufficient_evidence'):
         raise ValueError('Invalid verdict')
@@ -70,12 +103,16 @@ def main():
     pending=output.with_suffix('.pending.json')
     if pending.exists(): raise ValueError('Prior request needs reconciliation; no automatic retry')
     write(pending,{'input_sha256':identity,'model':a.model,'status':'submission_intent'})
+    response_path=output.with_suffix('.response.json')
+    if response_path.exists():
+        raise ValueError('Saved provider response needs reconciliation; do not resubmit')
     raw=api('models/'+a.model+':generateContent',{
       'systemInstruction':{'parts':[{'text':RULES}]},
       'contents':[{'role':'user','parts':[
         {'inlineData':{'mimeType':'video/mp4','data':base64.b64encode(video).decode()}},
         {'text':json.dumps(packet,ensure_ascii=False)}]}],
-      'generationConfig':{'responseMimeType':'application/json'}})
+      'generationConfig':{'responseMimeType':'application/json'}},
+      error_log=output.with_suffix('.errors.json'))
     write(output.with_suffix('.response.json'),raw)
     c=raw.get('candidates',[])
     if not c or c[0].get('finishReason')!='STOP': raise ValueError('Incomplete provider response')
