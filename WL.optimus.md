@@ -1,5 +1,7 @@
 # WL.optimus — The Little Days
 
+> **Yêu cầu kiến trúc đã khóa:** Đọc và tuân thủ [ARCHITECTURE_LOCK.md](ARCHITECTURE_LOCK.md) trước khi thực thi. GitHub quản lý code và điều khiển lượt chạy; ChatGPT điều phối chính; Gemini hỗ trợ thực hiện và giữ quyền duyệt idea cuối. Máy cá nhân chỉ là nơi thực thi khi cần. Đây là yêu cầu kiến trúc đã chốt, không phải xác nhận đã triển khai đầy đủ. Các phần workflow còn nháp không tự được khóa theo.
+
 Phiên bản: 0.1 · Snapshot ngày 26/10/2026 (Asia/Bangkok).
 Trạng thái: BẢN NHÁP ĐANG HOÀN THIỆN, CHƯA KHÓA.
 
