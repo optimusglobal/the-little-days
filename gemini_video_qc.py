@@ -9,7 +9,7 @@ def approved(result):
             and result.get('expected_lines_present') is True
             and result.get('speaker_assignments_correct') is True
             and isinstance(result.get('actual_transcript'),list)
-            and result.get('material_errors')==[])
+            and result.get('material_errors')==[] and result.get('extra_dialogue')==[])
 
 def main():
     p=argparse.ArgumentParser()
