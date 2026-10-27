@@ -1,0 +1,54 @@
+{
+  "provider": "Gemini",
+  "model": "gemini-3-flash-preview",
+  "response_id": "W9ngao_YEobVrfcPmY2noQw",
+  "input_sha256": "8112cd5955d48dd124125182215ebcb33529a24507c4c4a540f397ee25b26093",
+  "result": {
+    "approved": true,
+    "verdict": "ready",
+    "reason": "Phân bổ lại hội thoại giữa hai clip để giảm mật độ chuyển cảnh (Clip 1: 3 lượt, Clip 2: 4 lượt). Đảm bảo tính nhất quán về vị trí (Mẹ trái, Bố phải, Con giữa) và hành động (Con ôm Mẹ). Giữ nguyên trang phục và giày buộc dây theo Frame0 đã xác nhận.",
+    "change_summary": [
+      "Moved the split point to after 'Dad do' to balance dialogue density.",
+      "Corrected parent positions: Mother kneeling left, Father kneeling right, Daughter on sofa center.",
+      "Ensured Daughter hugs/kisses Mother, not Father.",
+      "Maintained terracotta/cream for Mother, sage/jeans for Father, peach dress/pigtails/white lace-ups for Daughter.",
+      "Removed sneaker replacement suggestions to match Frame0 verified lace-up shoes."
+    ],
+    "master_prompt": "A 16-second 3D family comedy in vertical 9:16. Inside a cozy US home entryway, a 2-year-old girl in a peach dress and pigtails sits on a sofa. Her mother (left, terracotta top, cream trousers) and father (right, sage t-shirt, jeans) are kneeling on the floor to help with her white lace-up shoes. The daughter refuses her mother's help, saying 'Mama, no.' The mother asks 'No?' and the daughter points to her father, saying 'Dad do.' The father, surprised, asks 'Me?' to which she replies 'Yes.' Suddenly, she turns back to her mother with open arms, shouting 'Mama!' and gives her a big hug and kiss. The father smiles, holding the shoelaces, and says 'Yes, boss.' The scene is warm and bright with natural lighting.",
+    "part1_prompt": "Part 1 of 2. 8 seconds. 3D family comedy, vertical 9:16. Start from Frame 0: Mother (left, terracotta top) and Father (right, sage t-shirt) kneeling on floor, Daughter (center, peach dress, pigtails) sitting on sofa in white lace-up shoes. 0-2.5s: Close-up on Daughter as she pushes Mother's hand away gently, saying 'Mama, no.' 2.5-4.5s: Cut to Mother's face, she looks surprised and asks 'No?' 4.5-6.5s: Daughter points at Father and says 'Dad do.' 6.5-8.0s: Wide shot showing all three characters; Father looks up from the shoes, and Mother looks at Father. No extra dialogue.",
+    "part2_prompt": "Part 2 of 2. 8 seconds. Continuity from Part 1 end-frame. 0-1.5s: Close-up on Father in sage t-shirt, he points to himself and asks 'Me?' 1.5-3.0s: Cut to Daughter nodding firmly, saying 'Yes.' 3.0-4.5s: Daughter suddenly turns back to Mother with a huge smile, reaching out and shouting 'Mama!' 4.5-6.5s: Daughter leans forward to hug Mother's neck and kisses her cheek; Mother supports her securely. 6.5-8.0s: Cut to Father holding the shoelaces, smiling warmly at the pair, saying 'Yes, boss.' Maintain consistent clothing and seating positions.",
+    "part1_lines": [
+      {
+        "speaker": "Daughter",
+        "text": "Mama, no."
+      },
+      {
+        "speaker": "Mother",
+        "text": "No?"
+      },
+      {
+        "speaker": "Daughter",
+        "text": "Dad do."
+      }
+    ],
+    "part2_lines": [
+      {
+        "speaker": "Father",
+        "text": "Me?"
+      },
+      {
+        "speaker": "Daughter",
+        "text": "Yes."
+      },
+      {
+        "speaker": "Daughter",
+        "text": "Mama!"
+      },
+      {
+        "speaker": "Father",
+        "text": "Yes, boss."
+      }
+    ],
+    "total_duration_seconds": 16
+  }
+}
