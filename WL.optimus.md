@@ -259,3 +259,16 @@ Phần này thay thế mọi chỉ dẫn cũ mâu thuẫn về quyền quyết �
 - Ảnh tham chiếu duy nhất cho toàn bộ nhân vật là L5, kể cả các hàng idea khác; L6 trống không phải blocker.
 - Giữ đầy đủ thoại và thời gian diễn; mục tiêu video mới hay hơn hoặc ít nhất ngang video nguồn. Không cắt thoại để ép thời lượng. Nếu Gemini không đủ thời lượng, chia hai video khi có thể giữ đầy đủ thoại và liên tục; hỏi chủ dự án trước khi đổi sang Grok.
 - Khi cần chủ dự án phản hồi, cung cấp lựa chọn bấm có sẵn thay vì yêu cầu gõ.
+
+
+## 15. Chuyển kiểm duyệt idea sang Gemini API — 27/10/2026
+
+Chủ dự án đã chọn tự động hóa lâu dài bằng Gemini API và xác nhận cho phép lưu cập nhật API vào repo này. Phần này thay thế yêu cầu bắt buộc dùng box Gemini ở mục 14 cho bước kiểm duyệt idea; box cũ chỉ là lịch sử, không được tuyên bố phản hồi API xuất hiện ở đó.
+
+- Gemini vẫn quyết định biên tập cuối cùng. Gửi video nguồn thực tế bao gồm audio, bản nháp và brief dự án; nhận verdict use/revise/reject/insufficient_evidence cùng transcript, giới hạn và bản viết lại.
+- Chỉ triển khai tiếp khi Gemini duyệt bản gốc hoặc chốt rõ bản do Gemini sửa. Nội dung cuối ghi nguyên văn vào đúng trường Sheets sau khi kiểm tra hàng và header. Không ghi đè A/B, ảnh L5 hoặc checkbox admin.
+- Ảnh tham chiếu duy nhất vẫn là L5. Giữ đầy đủ thoại và thời gian diễn; không cắt thoại để ép thời lượng. Nếu cần đổi dịch vụ tạo video sang Grok, hỏi chủ dự án trước.
+- Bộ gọi độc lập: gemini_idea_review.py; hướng dẫn: GEMINI_API_SETUP.md. Code đã đặt trên Mia và lưu GitHub; năm kiểm tra logic duyệt đã đạt. Chưa có lượt gọi Gemini API thành công được xác minh.
+- Trạng thái cấu hình: Python trên Mia chưa tìm thấy API key khả dụng. Cần cấu hình GEMINI_API_KEY cục bộ, xác minh model hỗ trợ video/JSON và quota trước khi gọi review thật. Không suy ra key hợp lệ từ kiểm tra biến môi trường đơn thuần.
+- Bản này chưa tự nối vào runner hoặc lịch hằng ngày, chưa tự ghi Sheets và chưa thay thế công cụ tạo video. Không coi việc đặt code là hệ thống tự động hoàn tất. IDEA_002 giữ pending ở bước xác minh audio và Gemini kiểm duyệt.
+- Không lưu API key trong GitHub, Sheets, chat hoặc packet. Lưu phản hồi gốc, model, response ID khi có, hash đầu vào và bản chốt ở hồ sơ local riêng tư. Không tự retry khi yêu cầu trước chưa được đối soát.
