@@ -6,7 +6,7 @@ from export_browser_packet import verify_packet_live
 
 HEADERS=['Mã idea nội bộ','Link video gốc','Kịch bản / Storyboard','Ảnh tham chiếu','Frame 0','Prompt video','AI tạo video','Chế độ / điểm dừng','Trạng thái sản xuất','Phiên bản']
 CONFIG={'header_row':4,'headers':{'script':HEADERS[2],'reference':HEADERS[3],'frame':HEADERS[4],'prompt':HEADERS[5],'service':HEADERS[6],'mode':HEADERS[7]}}
-VALUES=['IDEA_X','original','12s','ref','frame','12 seconds','Gemini','Làm đến video','Sẵn sàng','v1']
+VALUES=['IDEA_X','original','12s','ref','frame','12 seconds','Gemini','Làm đến video','Sẵn sàng','v1',None,'ref']
 PACKET={'idea_id':'IDEA_X','source':'original','script':'12s','reference_url':'ref','frame_url':'frame','prompt':'12 seconds','service':'Gemini','mode':'Làm đến video','production_status':'Sẵn sàng','version':'v1'}
 class FakeSheet:
     def __init__(self,*args):pass
