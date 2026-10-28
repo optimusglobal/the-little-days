@@ -42,6 +42,27 @@ def download_image(session, url, path):
             tmp.unlink(missing_ok=True)
 
 
+
+def verify_packet_live(packet, config_path='config.example.json'):
+    """Fail closed on stale, altered, or unverifiable live Sheet data."""
+    config = json.loads(Path(config_path).read_text(encoding='utf-8'))
+    live = Sheets(config).read()
+    entry = plan(live, config, packet['idea_id'])[0]
+    row = live['rows'][entry['row_number'] - config['header_row'] - 1]
+    expected = {key: cell(row, resolve(live['headers'], config['headers'][key]))
+                for key in ('frame', 'prompt', 'service', 'mode', 'script')}
+    expected.update(reference=cell(live['rows'][0], 11),
+                    production_status=cell(row, resolve(live['headers'], 'Trạng thái sản xuất')),
+                    version=cell(row, resolve(live['headers'], 'Phiên bản')),
+                    source=entry['source'])
+    for key, value in expected.items():
+        if packet.get('reference_url' if key == 'reference' else 'frame_url' if key == 'frame' else key) != value:
+            raise Blocked('Packet differs from current Sheet: ' + key)
+    if expected['production_status'] != 'Sẵn sàng':
+        raise Blocked('Production status is not explicitly ready')
+    require_packet(packet)
+    return True
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--idea', required=True)
