@@ -1,0 +1,25 @@
+name: Human Approval Gate — Safe Test
+on:
+  push:
+    branches:
+      - feature/p0-render-safety-prompt-integrity
+    paths:
+      - .github/workflows/human-approval-test.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  require-human-review:
+    name: Human approval required (no render)
+    runs-on: ubuntu-latest
+    environment: human-approval
+    steps:
+      - name: Confirm gate was released
+        shell: bash
+        run: |
+          echo "APPROVAL_GATE_RELEASED=true"
+          echo "Run ID: ${GITHUB_RUN_ID}"
+          echo "Actor: ${GITHUB_ACTOR}"
+          echo "Commit: ${GITHUB_SHA}"
+          echo "THIS IS NOT A SIGNED APPROVAL RECEIPT."
+          echo "NO RENDER, NO SECRETS, NO PRODUCTION AUTHORIZATION."
