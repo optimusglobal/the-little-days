@@ -44,7 +44,15 @@ def _read(root, idea, segment):
     p=_ledger(root,idea,segment)
     return json.loads(p.read_text(encoding='utf8')) if p.exists() else {'attempts':[]}
 
+def check_historical_lock(root, idea):
+    safe = re.sub(r'[^a-zA-Z0-9_-]', '_', idea)
+    marker = Path(root) / 'historical-locks' / (safe + '.json')
+    if marker.exists():
+        raise GuardError('Historical render reconciliation required; do not submit')
+    return True
+
 def authorize_submission(root, idea, segment, confirmed, revision_approved):
+    check_historical_lock(root, idea)
     if not confirmed:
         raise GuardError('Explicit send confirmation is required')
     n=len(_read(root,idea,segment)['attempts'])
