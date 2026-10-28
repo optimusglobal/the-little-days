@@ -62,6 +62,8 @@ def verify_packet_live(packet, config_path='config.example.json'):
     if expected['production_status'] != 'Sẵn sàng':
         raise Blocked('Production status is not explicitly ready')
     require_packet(packet)
+    if packet.get('timeline', {}).get('approval') != 'approved' or packet['timeline'].get('idea_id') != packet['idea_id']:
+        raise Blocked('Timeline approval is missing or belongs to another idea')
     validate_timeline(packet)
     return True
 
