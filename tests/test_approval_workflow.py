@@ -1,42 +1,51 @@
-"""Approval workflow tests use a temporary external control root; no real approval."""
-import tempfile
+"""Offline signer tests; private key exists only inside temporary fixture."""
 import unittest
+import tempfile
 from pathlib import Path
 from unittest.mock import patch
-from approval_guard import digest, verify_approval
-from approval_workflow import approve
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from cryptography.hazmat.primitives import serialization
+from approval_guard import digest,verify_approval
 from production_guard import GuardError
+from tools.approver_sign_offline import signed_receipt
+import json
 
 class ApprovalWorkflowTests(unittest.TestCase):
     def setUp(self):
-        self.temp=tempfile.TemporaryDirectory()
-        self.addCleanup(self.temp.cleanup)
-        self.patch=patch('approval_workflow.CONTROL_ROOT',Path(self.temp.name))
-        self.patch.start()
-        self.addCleanup(self.patch.stop)
-        self.verify_patch=patch('approval_guard.CONTROL_ROOT',Path(self.temp.name))
-        self.verify_patch.start()
-        self.addCleanup(self.verify_patch.stop)
+        self.tmp=tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.root=Path(self.tmp.name)
         self.timeline={'idea_id':'IDEA_DEMO','schema_version':1,'segments':[]}
-    def test_no_confirmation_blocks(self):
-        with self.assertRaises(GuardError):
-            approve(self.timeline,'reviewer','incorrect')
-        self.assertFalse((Path(self.temp.name)/'approvals'/'IDEA_DEMO.json').exists())
-    def test_explicit_human_receipt_then_verify(self):
-        p=approve(self.timeline,'reviewer',digest(self.timeline))
-        self.assertTrue(p.exists())
+        self.key=Ed25519PrivateKey.generate()
+        self.priv=self.key.private_bytes(serialization.Encoding.PEM,serialization.PrivateFormat.PKCS8,serialization.NoEncryption())
+        (self.root/'trust').mkdir()
+        (self.root/'trust'/'fixture.pem').write_bytes(self.key.public_key().public_bytes(
+            serialization.Encoding.PEM,serialization.PublicFormat.SubjectPublicKeyInfo))
+        for name,value in [('approval_guard.CONTROL_ROOT',self.root),('approval_guard.TRUST_ROOT',self.root/'trust')]:
+            p=patch(name,value);p.start();self.addCleanup(p.stop)
+    def test_signed_receipt_accepted(self):
+        rec=signed_receipt(self.timeline,'reviewer','fixture',self.priv,digest(self.timeline))
+        p=self.root/'approvals'/'IDEA_DEMO.json';p.parent.mkdir()
+        p.write_text(json.dumps(rec))
         self.assertTrue(verify_approval(self.timeline,'IDEA_DEMO'))
-    def test_no_silent_overwrite(self):
-        approve(self.timeline,'reviewer',digest(self.timeline))
-        with self.assertRaisesRegex(GuardError,'never overwrite'):
-            approve(self.timeline,'reviewer',digest(self.timeline))
-    def test_inline_approved_flag_blocks(self):
-        self.timeline['approval']='approved'
-        with self.assertRaises(GuardError):
-            approve(self.timeline,'reviewer',digest(self.timeline))
-    def test_path_traversal_rejected(self):
-        self.timeline['idea_id']='../escape'
-        with self.assertRaises(GuardError):
-            approve(self.timeline,'reviewer',digest(self.timeline))
-
+    def test_wrong_digest_blocks_signing(self):
+        with self.assertRaisesRegex(GuardError,'digest'):
+            signed_receipt(self.timeline,'reviewer','fixture',self.priv,'wrong')
+    def test_forged_signature_blocked(self):
+        rec=signed_receipt(self.timeline,'reviewer','fixture',self.priv,digest(self.timeline))
+        rec['approved_by']='forged'
+        p=self.root/'approvals'/'IDEA_DEMO.json';p.parent.mkdir();p.write_text(json.dumps(rec))
+        with self.assertRaisesRegex(GuardError,'signature'):
+            verify_approval(self.timeline,'IDEA_DEMO')
+    def test_old_unsigned_receipt_rejected(self):
+        p=self.root/'approvals'/'IDEA_DEMO.json';p.parent.mkdir()
+        p.write_text(json.dumps({'schema_version':1,'decision':'approved','idea_id':'IDEA_DEMO',
+             'timeline_sha256':digest(self.timeline),'approved_by':'anyone'}))
+        with self.assertRaisesRegex(GuardError,'Signed approval'):
+            verify_approval(self.timeline,'IDEA_DEMO')
+    def test_render_workflow_no_approve_action(self):
+        from pathlib import Path
+        source=Path('approval_workflow.py').read_text(encoding='utf8')
+        self.assertNotIn("choices=['review','approve','verify']",source)
+        self.assertNotIn('def approve(',source)
 if __name__=='__main__':unittest.main()
