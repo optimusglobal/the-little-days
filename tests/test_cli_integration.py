@@ -76,6 +76,15 @@ class CliIntegrationTests(unittest.TestCase):
         outcome,count=self.exercise(send=True,budget=True)
         self.assertIn('revision',outcome.lower())
         self.assertEqual(count,0)
+    def test_failed_preflight_never_constructs_browser(self):
+        with tempfile.TemporaryDirectory() as td:
+            p=Path(td)/'packet.json'
+            p.write_text(json.dumps({'idea_id':'IDEA_TEST','segment_id':'01'}),encoding='utf8')
+            argv=['run_browser.py','--idea','IDEA_TEST','--packet',str(p),'--prepare-only']
+            with patch('sys.argv',argv),patch('run_browser.verify_packet_live',side_effect=Blocked('stale sheet')),patch('run_browser.MCP',side_effect=AssertionError('MCP must not start')) as mcp,patch('run_browser.Job',side_effect=AssertionError('Job must not start')) as job:
+                with self.assertRaisesRegex(Blocked,'stale sheet'):run_browser.main()
+                mcp.assert_not_called()
+                job.assert_not_called()
     def test_authorized_job_calls_mock_submit_once(self):
         outcome,count=self.exercise(send=True)
         self.assertEqual(outcome,'accepted')
