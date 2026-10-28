@@ -16,13 +16,13 @@ class SourceTests(unittest.TestCase):
     def test_complete_source_passes(self):self.assertTrue(verify_source_dialogue(packet()))
     def test_missing_line_blocked(self):
         p=packet();p['timeline']['source_dialogue_contract']['source_turns'].pop()
-        with self.assertRaisesRegex(GuardError,'missing'):verify_source_dialogue(p)
+        with self.assertRaisesRegex(GuardError,'incomplete'):verify_source_dialogue(p)
     def test_rewrite_blocked(self):
         p=packet();p['timeline']['source_dialogue_contract']['source_turns'][0]['text']='You were late.'
-        with self.assertRaisesRegex(GuardError,'rewritten'):verify_source_dialogue(p)
+        with self.assertRaisesRegex(GuardError,'differs'):verify_source_dialogue(p)
     def test_wrong_speaker_blocked(self):
         p=packet();p['timeline']['source_dialogue_contract']['source_turns'][0]['speaker']='Worker'
-        with self.assertRaisesRegex(GuardError,'reassigned'):verify_source_dialogue(p)
+        with self.assertRaisesRegex(GuardError,'differs'):verify_source_dialogue(p)
     def test_changed_script_blocked(self):
         p=packet();p['script']='new script'
         with self.assertRaisesRegex(GuardError,'exact script'):verify_source_dialogue(p)
