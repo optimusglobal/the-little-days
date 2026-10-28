@@ -1,0 +1,79 @@
+name: Timeline SHA-256 Approval - Safe Test
+
+on:
+  push:
+    branches:
+      - feature/p0-render-safety-prompt-integrity
+    paths:
+      - '.github/workflows/timeline-approval.yml'
+      - 'examples/approval-demo-timeline.json'
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    outputs:
+      timeline_sha256: ${{ steps.hash.outputs.digest }}
+      source_commit: ${{ steps.hash.outputs.commit }}
+    steps:
+      - name: Checkout immutable triggering commit
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+      - name: Compute canonical timeline digest
+        id: hash
+        shell: bash
+        run: |
+          python - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          timeline = json.loads(Path('examples/approval-demo-timeline.json').read_text(encoding='utf-8'))
+          assert timeline['idea_id'] == 'IDEA_APPROVAL_TEST', 'Unexpected idea ID'
+          payload = json.dumps(timeline, sort_keys=True, ensure_ascii=False, separators=(',', ':')).encode('utf-8')
+          digest = hashlib.sha256(payload).hexdigest()
+          commit = os.environ['GITHUB_SHA']
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as f:
+              f.write(f'digest={digest}\ncommit={commit}\n')
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as f:
+              f.write('## Timeline pending human review\n\n')
+              f.write(f'- Idea ID: `IDEA_APPROVAL_TEST`\n')
+              f.write(f'- Source commit: `{commit}`\n')
+              f.write(f'- Canonical SHA-256: `{digest}`\n')
+              f.write('- **TEST ONLY — does not authorize rendering.**\n')
+          print('Preflight digest:', digest)
+          PY
+
+  human_approval:
+    needs: preflight
+    runs-on: ubuntu-latest
+    environment: human-approval
+    steps:
+      - name: Checkout the same immutable commit
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          ref: ${{ needs.preflight.outputs.source_commit }}
+      - name: Check same timeline after human approval
+        env:
+          APPROVED_DIGEST: ${{ needs.preflight.outputs.timeline_sha256 }}
+          SOURCE_COMMIT: ${{ needs.preflight.outputs.source_commit }}
+        run: |
+          python - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          timeline = json.loads(Path('examples/approval-demo-timeline.json').read_text(encoding='utf-8'))
+          assert timeline['idea_id'] == 'IDEA_APPROVAL_TEST', 'Idea ID changed'
+          payload = json.dumps(timeline, sort_keys=True, ensure_ascii=False, separators=(',', ':')).encode('utf-8')
+          actual = hashlib.sha256(payload).hexdigest()
+          assert actual == os.environ['APPROVED_DIGEST'], 'Timeline digest mismatch'
+          assert os.environ['SOURCE_COMMIT'] == os.environ['GITHUB_SHA'], 'Commit mismatch'
+          print('TIMELINE_APPROVED_TEST')
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as f:
+              f.write('## Approved safe test\n\n')
+              f.write(f'- Timeline SHA-256: `{actual}`\n')
+              f.write(f'- Commit: `{os.environ["SOURCE_COMMIT"]}`\n')
+              f.write('- No signed receipt, Mia integration, or rendering.\n')
+          PY
