@@ -102,6 +102,8 @@ def main():
     fields['reference'] = cell(live['rows'][0], 11)
     status_index = resolve(live['headers'], 'Trạng thái sản xuất')
     production_status = cell(row, status_index)
+    if production_status != 'Sẵn sàng':
+        raise Blocked('Production status is not explicitly ready')
     if not fields['frame'] or not fields['prompt'] or not fields['reference'] or not fields['script']:
         raise Blocked('Source-to-Frame0 production is not complete; do not invent missing assets')
     # Hash of data, never idea ID as a filesystem component.
