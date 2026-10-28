@@ -33,7 +33,7 @@
     ],
     "prompt": [
       "python",
-      "adapters/reviewed_script_prompt.py"
+      "adapters/gemini_prompt_worker.py"
     ]
   }
 }
