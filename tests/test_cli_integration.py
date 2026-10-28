@@ -38,7 +38,7 @@ class CliIntegrationTests(unittest.TestCase):
             (control/'.initialized').write_text('ready',encoding='utf8')
             FakeJob.submissions=0
             if budget:
-                record_attempt(runtime,'IDEA_TEST','01','existing-attempt')
+                record_attempt(control,'IDEA_TEST','01','existing-attempt')
             argv=['run_browser.py','--idea','IDEA_TEST','--packet',str(packet_path),'--runtime',str(runtime)]
             if send: argv.append('--send-confirmed')
             class ScenarioJob(FakeJob):
