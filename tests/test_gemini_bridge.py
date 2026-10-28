@@ -28,8 +28,7 @@ class GeminiBridgeTests(unittest.TestCase):
     def test_idea_cannot_fabricate_gemini_review(self):
         with tempfile.TemporaryDirectory() as d:
             req=Path(d)/"idea.request.json"
-            req.write_text(json.dumps({"stage":"idea","previous":{"analysis":{"status":"done",
-                "result":{"review_record":{"approved":False,"review":{}}}}}}}))
+            req.write_text(json.dumps({"stage":"idea","previous":{"analysis":{"status":"done","result":{"review_record":{"approved":False,"review":{}}}}}}))
             with self.assertRaises(ValueError):
                 execute(req,Path(d)/"idea.result.json")
 
