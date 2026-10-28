@@ -9,6 +9,16 @@ from urllib.parse import parse_qs, urlsplit
 from browser_video import Blocked, atomic, require_packet, sha
 from runner import Sheets, plan, resolve, cell
 from timeline_guard import validate_timeline
+import hashlib
+
+def select_segment_prompt(timeline, segment_id, master_prompt):
+    if timeline.get('master_prompt_sha256') != hashlib.sha256(master_prompt.encode('utf-8')).hexdigest():
+        raise Blocked('Timeline not bound to Sheet master prompt')
+    matches = [s for s in timeline.get('segments', []) if isinstance(s, dict) and s.get('segment_id') == segment_id]
+    if len(matches) != 1 or not isinstance(matches[0].get('prompt'), str) or not matches[0]['prompt'].strip():
+        raise Blocked('Approved segment prompt missing or ambiguous')
+    return matches[0]['prompt']
+
 
 
 def drive_id(url):
@@ -57,13 +67,16 @@ def verify_packet_live(packet, config_path='config.example.json'):
                     version=cell(row, resolve(live['headers'], 'Phiên bản')),
                     source=entry['source'])
     for key, value in expected.items():
-        if packet.get('reference_url' if key == 'reference' else 'frame_url' if key == 'frame' else key) != value:
+        mapped = 'reference_url' if key == 'reference' else 'frame_url' if key == 'frame' else 'master_prompt' if key == 'prompt' else key
+        if packet.get(mapped) != value:
             raise Blocked('Packet differs from current Sheet: ' + key)
     if expected['production_status'] != 'Sẵn sàng':
         raise Blocked('Production status is not explicitly ready')
     require_packet(packet)
     if packet.get('timeline', {}).get('approval') != 'approved' or packet['timeline'].get('idea_id') != packet['idea_id']:
         raise Blocked('Timeline approval is missing or belongs to another idea')
+    if packet.get('prompt') != select_segment_prompt(packet['timeline'], packet['segment_id'], expected['prompt']):
+        raise Blocked('Selected segment prompt differs from approved timeline')
     validate_timeline(packet)
     return True
 
@@ -104,9 +117,10 @@ def main():
         download_image(session, fields[field], folder / (field + '.png'))
     version_header = 'Phiên bản'
     version = cell(row, resolve(live['headers'], version_header))
+    segment_prompt = select_segment_prompt(timeline, args.segment, fields['prompt'])
     packet = {'idea_id': entry['idea_id'], 'source': entry['source'],
               'frame_url': fields['frame'], 'reference_url': fields['reference'],
-              'prompt': fields['prompt'], 'script': fields['script'], 'service': fields['service'], 'mode': fields['mode'],
+              'prompt': segment_prompt, 'master_prompt': fields['prompt'], 'script': fields['script'], 'service': fields['service'], 'mode': fields['mode'],
               'model': args.model, 'version': version, 'segment_id': args.segment, 'production_status': production_status,
               'timeline': timeline}
     for field in ('frame', 'reference'):
