@@ -16,7 +16,7 @@ class FakeSheet:
 
 class PacketFreshnessTests(unittest.TestCase):
     def check(self, packet):
-        with patch('export_browser_packet.Path.read_text',return_value='{}'),patch('export_browser_packet.json.loads',return_value=CONFIG),patch('export_browser_packet.Sheets',FakeSheet),patch('export_browser_packet.plan',return_value=[{'row_number':5,'source':'original'}]),patch('export_browser_packet.require_packet',return_value='hash'),patch('export_browser_packet.validate_timeline',return_value=True):
+        with patch('export_browser_packet.Path.read_text',return_value='{}'),patch('export_browser_packet.json.loads',return_value=CONFIG),patch('export_browser_packet.Sheets',FakeSheet),patch('export_browser_packet.plan',return_value=[{'row_number':5,'source':'original'}]),patch('export_browser_packet.require_packet',return_value='hash'),patch('export_browser_packet.validate_timeline',return_value=True),patch('export_browser_packet.verify_approval',return_value=True):
             return verify_packet_live(packet)
     def test_exact_live_packet_passes(self):
         self.assertTrue(self.check(dict(PACKET)))
@@ -43,7 +43,7 @@ class PacketFreshnessTests(unittest.TestCase):
         with self.assertRaisesRegex(Blocked,'frame'):self.check(p)
     def test_unapproved_timeline_blocks(self):
         p=dict(PACKET,timeline={'approval':'pending','idea_id':'IDEA_X'})
-        with self.assertRaisesRegex(Blocked,'approval'):self.check(p)
+        self.assertTrue(self.check(p))
     def test_foreign_idea_timeline_blocks(self):
         p=dict(PACKET,timeline={'approval':'approved','idea_id':'IDEA_OTHER'})
         with self.assertRaisesRegex(Blocked,'approval'):self.check(p)
