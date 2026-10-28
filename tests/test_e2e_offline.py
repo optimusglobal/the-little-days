@@ -11,6 +11,7 @@ from pathlib import Path
 from unittest.mock import patch
 import run_browser
 from approval_guard import digest
+from signed_fixture import make_signed
 
 SCRIPT='12 seconds. Daughter: "Hello"'
 PROMPT='12 seconds. Daughter: "Hello". She smiles'
@@ -57,10 +58,7 @@ class EndToEndOfflineTests(unittest.TestCase):
              'reference_url':'ref','service':'Gemini','mode':'Làm đến video',
              'production_status':'Sẵn sàng','version':'v1'}
     def approve(self):
-        path=self.control/'approvals'/'IDEA_DEMO.json'
-        path.parent.mkdir(parents=True,exist_ok=True)
-        path.write_text(json.dumps({'schema_version':1,'decision':'approved','idea_id':'IDEA_DEMO',
-                  'timeline_sha256':digest(self.timeline),'approved_by':'unit-test-reviewer'}))
+        make_signed(self.control,'IDEA_DEMO',self.timeline)
     def run_case(self,send=True):
         p=self.root/'packet.json'
         p.write_text(json.dumps(self.packet))
@@ -74,6 +72,7 @@ class EndToEndOfflineTests(unittest.TestCase):
              patch('export_browser_packet.require_packet',return_value='hash'),\
              patch('export_browser_packet.json.loads',wraps=json.loads),\
              patch('approval_guard.CONTROL_ROOT',self.control),\
+             patch('approval_guard.TRUST_ROOT',self.control/'trust'),\
              patch('production_guard.CONTROL_ROOT',self.control),\
              patch('run_browser.Job',FakeJob),patch('run_browser.MCP',return_value=object()),\
              patch('run_browser.lock',return_value=contextlib.nullcontext()):
