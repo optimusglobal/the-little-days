@@ -7,7 +7,7 @@ import subprocess
 import sys
 import time
 from browser_video import Blocked, Job, MCP, lock
-from production_guard import GuardError, check_timeline, authorize_submission, record_attempt, check_production_status
+from production_guard import GuardError, check_timeline, reserve_submission, check_production_status
 from export_browser_packet import verify_packet_live
 
 
@@ -54,8 +54,7 @@ def main():
                 verify_packet_live(packet)
                 check_production_status(packet.get('production_status',''))
                 check_timeline(packet.get('script', ''), packet['prompt'])
-                authorize_submission(Path(args.runtime), args.idea, packet['segment_id'], True, args.revision_approved)
-                record_attempt(Path(args.runtime), args.idea, packet['segment_id'], job.key)
+                reserve_submission(Path(args.runtime), args.idea, packet['segment_id'], job.key, True, args.revision_approved)
             except (GuardError, Blocked) as exc:
                 raise Blocked(str(exc))
             job.submit()
