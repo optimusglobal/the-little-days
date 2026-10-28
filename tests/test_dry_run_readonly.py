@@ -27,8 +27,8 @@ class DryRunTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             path=Path(td)/'config.json'
             path.write_text(json.dumps({'header_row':4,'headers':{'frame':'Frame 0'}}),encoding='utf8')
-            with patch('dry_run_readonly.Sheets',FakeSheet),patch('dry_run_readonly.check_historical_lock',side_effect=GuardError('historical lock')):
-                result=inspect('IDEA_002',str(path))
+            with patch('dry_run_readonly.Sheets',FakeSheet),patch('dry_run_readonly.check_historical_lock',side_effect=GuardError('historical lock')),patch('dry_run_readonly.verify_drive_image',return_value=True):
+                result=inspect('IDEA_002',str(path),session=object())
                 self.assertEqual(result['historical_lock'],'BLOCK')
                 self.assertEqual(result['decision'],'NO_GO')
                 self.assertEqual(result['render'],'NEVER_SUBMITTED')
