@@ -52,8 +52,20 @@ def main():
             validate_timeline(packet)
         except (GuardError, Blocked) as exc:
             raise Blocked(str(exc))
+    if args.conversation:
+        if not args.packet:
+            raise Blocked('Recovery requires an existing --packet; never export during recovery')
+        if args.send_confirmed or args.revision_approved:
+            raise Blocked('Recovery cannot accept render or revision authorization flags')
+        from urllib.parse import urlsplit
+        import re
+        url=urlsplit(args.conversation)
+        if url.scheme!='https' or url.hostname!='gemini.google.com' or not re.fullmatch(r'/app/[A-Za-z0-9]+',url.path):
+            raise Blocked('Recovery requires an exact Gemini conversation URL')
     job=Job(packet,args.runtime,MCP())
     with lock(job.folder):
+        if args.conversation and job.state.get('status') not in ('pending','submitted','submission_uncertain','video_available'):
+            raise Blocked('Recovery requires an existing submitted job, not a fresh or prepared job')
         if job.state['status']=='downloaded':
             job.download(Path.home()/'Downloads',args.output)
         elif args.conversation:
@@ -64,6 +76,8 @@ def main():
             print(json.dumps({'status':job.state['status'],'record':str(job.path)}))
             return
         if job.state['status']=='prepared':
+            if args.conversation:
+                raise Blocked('Recovery must never submit a prepared job')
             if not args.send_confirmed:
                 raise Blocked('Prepared only; --send-confirmed required for render')
             try:
