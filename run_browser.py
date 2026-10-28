@@ -8,6 +8,7 @@ import sys
 import time
 from browser_video import Blocked, Job, MCP, lock
 from production_guard import GuardError, check_timeline, authorize_submission, record_attempt, check_production_status
+from export_browser_packet import verify_packet_live
 
 
 def main():
@@ -50,11 +51,12 @@ def main():
             if not args.send_confirmed:
                 raise Blocked('Prepared only; --send-confirmed required for render')
             try:
+                verify_packet_live(packet)
                 check_production_status(packet.get('production_status',''))
                 check_timeline(packet.get('script', ''), packet['prompt'])
                 authorize_submission(Path(args.runtime), args.idea, packet['segment_id'], True, args.revision_approved)
                 record_attempt(Path(args.runtime), args.idea, packet['segment_id'], job.key)
-            except GuardError as exc:
+            except (GuardError, Blocked) as exc:
                 raise Blocked(str(exc))
             job.submit()
         if job.state['status']=='submission_uncertain':
