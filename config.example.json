@@ -4,9 +4,9 @@
   "header_row": 4,
   "headers": {
     "idea": "Idea mới",
-    "hook": "Ý tưởng / Hook",
-    "insight": "Insight",
-    "angle": "Proposed Angle — US",
+    "hook": "Ý tưởng / hook · tự viết hoặc biên tập *\r\n",
+    "insight": "Tâm Lý Ẩn Sâu (Insight - Tại sao người ta lại chia sẻ?) *\r\n",
+    "angle": "Góc Viết Lại Mới (Proposed Angle - Độc Bản 100%) *\r\n\r\n",
     "script": "Kịch bản / Storyboard",
     "frame": "Frame 0",
     "prompt": "Prompt video",
