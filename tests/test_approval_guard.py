@@ -39,7 +39,7 @@ class ApprovalTests(unittest.TestCase):
             verify_approval(self.timeline,'IDEA_TEST')
     def test_rejected_receipt_blocked(self):
         self.receipt(decision='rejected')
-        with self.assertRaisesRegex(GuardError,'not valid'):
+        with self.assertRaisesRegex(GuardError,'Signed approval'):
             verify_approval(self.timeline,'IDEA_TEST')
     def test_other_idea_blocked(self):
         self.receipt()
