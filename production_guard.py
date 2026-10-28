@@ -92,3 +92,45 @@ def record_attempt(root, idea, segment, key):
         return state
     finally:
         guard_lock.unlink()
+
+
+def reserve_submission(runtime, idea, segment, key, confirmed, revision_approved):
+    """Single locked admission + durable submission intent, independent of job runtime."""
+    if not isinstance(segment, str) or not segment.strip() or not isinstance(key, str) or not key.strip():
+        raise GuardError('Stable segment and render key required')
+    check_historical_lock(runtime, idea)
+    if not confirmed:
+        raise GuardError('Explicit send confirmation is required')
+    p = _ledger(CONTROL_ROOT, idea, segment)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    guard_lock = p.with_suffix('.lock')
+    try:
+        fd = os.open(guard_lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+    except FileExistsError:
+        raise GuardError('Another submission owns this segment; reconcile first')
+    os.close(fd)
+    try:
+        check_historical_lock(runtime, idea)
+        state = _read(CONTROL_ROOT, idea, segment)
+        attempts = state['attempts']
+        if any(a['key'] == key for a in attempts):
+            raise GuardError('Same render key has already been submitted')
+        if len(attempts) >= 2:
+            raise GuardError('Render budget exhausted; human reset required')
+        if attempts and not revision_approved:
+            raise GuardError('Revision render requires separate approval')
+        if Path(runtime).resolve() != CONTROL_ROOT.resolve() and _read(runtime, idea, segment)['attempts']:
+            raise GuardError('Legacy render attempts require reconciliation')
+        attempts.append({'key': key, 'status': 'submission_intent'})
+        temp = p.with_suffix('.tmp')
+        try:
+            with temp.open('w', encoding='utf8') as f:
+                json.dump(state, f)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(temp, p)
+        finally:
+            temp.unlink(missing_ok=True)
+        return state
+    finally:
+        guard_lock.unlink()
