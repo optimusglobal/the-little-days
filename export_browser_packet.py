@@ -55,8 +55,8 @@ def main():
     entry = plan(live, config, args.idea)[0]
     row = live['rows'][entry['row_number'] - config['header_row'] - 1]
     fields = {key: cell(row, resolve(live['headers'], config['headers'][key]))
-              for key in ('frame', 'prompt', 'reference', 'service', 'mode')}
-    if not fields['frame'] or not fields['prompt'] or not fields['reference']:
+              for key in ('frame', 'prompt', 'reference', 'service', 'mode', 'script')}
+    if not fields['frame'] or not fields['prompt'] or not fields['reference'] or not fields['script']:
         raise Blocked('Source-to-Frame0 production is not complete; do not invent missing assets')
     # Hash of data, never idea ID as a filesystem component.
     import hashlib
@@ -72,7 +72,7 @@ def main():
     version = cell(row, resolve(live['headers'], version_header))
     packet = {'idea_id': entry['idea_id'], 'source': entry['source'],
               'frame_url': fields['frame'], 'reference_url': fields['reference'],
-              'prompt': fields['prompt'], 'service': fields['service'], 'mode': fields['mode'],
+              'prompt': fields['prompt'], 'script': fields['script'], 'service': fields['service'], 'mode': fields['mode'],
               'model': args.model, 'version': version}
     for field in ('frame', 'reference'):
         packet[field + '_path'] = str(folder / (field + '.png'))
@@ -81,7 +81,10 @@ def main():
     # Re-read to avoid binding new sheet prompt to stale downloaded assets.
     current = sheet.read()
     current_entry = plan(current, config, args.idea)[0]
-    if current['headers'] != live['headers'] or current_entry != entry:
+    current_row = current['rows'][current_entry['row_number'] - config['header_row'] - 1]
+    current_fields = {key: cell(current_row, resolve(current['headers'], config['headers'][key]))
+                      for key in fields}
+    if current['headers'] != live['headers'] or current_entry != entry or current_fields != fields:
         raise Blocked('Row changed during export; rerun before any submission')
     atomic(folder / 'packet.json', packet)
     print(json.dumps({'packet': str(folder / 'packet.json'), 'status': 'exported'}, ensure_ascii=True))
