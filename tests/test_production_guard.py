@@ -39,6 +39,18 @@ class ProductionGuardTests(unittest.TestCase):
         self.assertNotIn('args.segment', source)
         self.assertIn("record_attempt(Path(args.runtime), args.idea, packet['segment_id'], job.key)", source)
 
+    def test_historical_lock_blocks_idea_even_with_permission(self):
+        import json
+        from production_guard import check_historical_lock
+        with TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            hold=root/'historical-locks'
+            hold.mkdir()
+            (hold/'IDEA_002.json').write_text(json.dumps({'idea_id':'IDEA_002','status':'unreconciled'}),encoding='utf-8')
+            with self.assertRaises(GuardError):
+                check_historical_lock(root,'IDEA_002')
+            check_historical_lock(root,'IDEA_001')
+
     def test_explicit_authorization_required(self):
         with TemporaryDirectory() as tmp:
             with self.assertRaises(GuardError):
