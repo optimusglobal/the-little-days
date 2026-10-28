@@ -16,9 +16,16 @@ def verify_source_dialogue(packet):
     script=packet.get('script')
     if not isinstance(script,str) or contract.get('script_sha256')!=hashlib.sha256(script.encode('utf8')).hexdigest():
         raise GuardError('Source dialogue not bound to exact script')
+    # Only verifiable explicit Speaker: quoted-dialogue source format is admitted.
+    extracted=re.findall(r'([A-Za-z][A-Za-z0-9_-]{0,39}):\\s*[\"“]([^\"”]+)[\"”]',script)
+    if not extracted:
+        raise GuardError('Source script has no machine-verifiable attributed dialogue; human transcription needed')
     turns=contract.get('source_turns')
     if not isinstance(turns,list):
         raise GuardError('Reviewed source dialogue list required')
+    if len(extracted)!=len(turns) or any(src.get('speaker')!=speaker or src.get('text')!=text
+           for src,(speaker,text) in zip(turns,extracted) if isinstance(src,dict)):
+        raise GuardError('Source dialogue transcription incomplete or differs from script')
     manifest=timeline.get('character_dialogue_contract',{}).get('dialogue_manifest')
     if not isinstance(manifest,list) or len(turns)!=len(manifest):
         raise GuardError('Source dialogue missing or extra in segments')
