@@ -46,7 +46,8 @@ class ProductionGuardTests(unittest.TestCase):
     def test_cli_uses_packet_segment_not_missing_args_segment(self):
         from pathlib import Path
         source = Path('run_browser.py').read_text(encoding='utf8')
-        self.assertNotIn('args.segment', source)
+        self.assertIn("ap.add_argument('--segment'", source)
+        self.assertNotIn('reserve_submission(Path(args.runtime), args.idea, args.segment', source)
         self.assertIn("reserve_submission(Path(args.runtime), args.idea, packet['segment_id'], job.key, True, args.revision_approved)", source)
 
     def test_historical_lock_blocks_idea_even_with_permission(self):
