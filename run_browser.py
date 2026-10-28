@@ -47,6 +47,8 @@ def main():
             print(json.dumps({'status':job.state['status'],'record':str(job.path)}))
             return
         if job.state['status']=='prepared':
+            if any(x in packet.get('production_status','').casefold() for x in ('on-hold','on hold','tạm dừng','pause','đang chặn','bị chặn')):
+                raise Blocked('Production is on hold; do not render')
             if not args.send_confirmed:
                 raise Blocked('Prepared only; --send-confirmed required for render')
             try:
