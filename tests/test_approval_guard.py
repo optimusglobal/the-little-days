@@ -5,6 +5,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 from approval_guard import verify_approval,digest
+from signed_fixture import make_signed
 from production_guard import GuardError
 
 class ApprovalTests(unittest.TestCase):
@@ -15,12 +16,12 @@ class ApprovalTests(unittest.TestCase):
         p=patch('approval_guard.CONTROL_ROOT',self.root)
         p.start()
         self.addCleanup(p.stop)
+        trust=patch('approval_guard.TRUST_ROOT',self.root/'trust')
+        trust.start()
+        self.addCleanup(trust.stop)
         self.timeline={'idea_id':'IDEA_TEST','schema_version':1,'segments':[{'segment_id':'01','prompt':'8s'}]}
     def receipt(self, timeline=None, decision='approved'):
-        path=self.root/'approvals'/'IDEA_TEST.json'
-        path.parent.mkdir(parents=True,exist_ok=True)
-        path.write_text(json.dumps({'schema_version':1,'decision':decision,'idea_id':'IDEA_TEST',
-            'timeline_sha256':digest(timeline or self.timeline),'approved_by':'human-reviewer'}),encoding='utf8')
+        make_signed(self.root,'IDEA_TEST',timeline or self.timeline,decision)
     def test_missing_receipt_blocked(self):
         with self.assertRaisesRegex(GuardError,'receipt required'):
             verify_approval(self.timeline,'IDEA_TEST')
