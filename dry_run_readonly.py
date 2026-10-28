@@ -8,6 +8,16 @@ from approval_guard import verify_approval
 from timeline_guard import validate_timeline
 from export_browser_packet import select_segment_prompt, drive_id
 
+def verify_drive_image(session, url):
+    ident=drive_id(url)
+    response=session.get('https://www.googleapis.com/drive/v3/files/'+ident,
+                         params={'fields':'id,mimeType,size,trashed'},timeout=30)
+    response.raise_for_status()
+    info=response.json()
+    return (not info.get('trashed',False) and info.get('mimeType') in ('image/png','image/jpeg')
+            and 0 < int(info.get('size','0')) <= 25*1024*1024)
+
+
 def inspect(idea, config_path='config.example.json', timeline_path=None):
     config=json.loads(Path(config_path).read_text(encoding='utf8'))
     data=Sheets(config).read()
@@ -19,8 +29,14 @@ def inspect(idea, config_path='config.example.json', timeline_path=None):
     row=matching[0]
     reference=cell(data['rows'][0],11)
     frame=cell(row,resolve(data['headers'],config['headers']['frame']))
-    result['L5']='PASS' if reference and drive_id(reference) else 'BLOCK'
-    result['frame']='PASS' if frame and drive_id(frame) else 'BLOCK'
+    import google.auth
+    from google.auth.transport.requests import AuthorizedSession
+    session=AuthorizedSession(google.auth.default(scopes=['https://www.googleapis.com/auth/drive.readonly'])[0])
+    for field,url in (('L5',reference),('frame',frame)):
+        try:
+            result[field]='PASS' if url and verify_drive_image(session,url) else 'BLOCK'
+        except Exception:
+            result[field]='BLOCK'
     result['production_status']=cell(row,resolve(data['headers'],'Trạng thái sản xuất'))
     try:
         check_historical_lock('.runtime/browser',idea)
