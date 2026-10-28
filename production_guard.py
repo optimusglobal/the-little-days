@@ -49,18 +49,27 @@ def authorize_submission(root, idea, segment, confirmed, revision_approved):
     return True
 
 def record_attempt(root, idea, segment, key):
-    p=_ledger(root,idea,segment)
-    p.parent.mkdir(parents=True,exist_ok=True)
-    state=_read(root,idea,segment)
-    if any(a['key']==key for a in state['attempts']):
-        raise GuardError('Same render key has already been submitted')
-    if len(state['attempts'])>=2:
-        raise GuardError('Render budget exhausted')
-    state['attempts'].append({'key':key,'status':'submission_intent'})
-    temp=p.with_suffix('.tmp')
-    with temp.open('w',encoding='utf8') as f:
-        json.dump(state,f)
-        f.flush()
-        os.fsync(f.fileno())
-    os.replace(temp,p)
-    return state
+    p = _ledger(root, idea, segment)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    guard_lock = p.with_suffix('.lock')
+    try:
+        fd = os.open(guard_lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+    except FileExistsError:
+        raise GuardError('Another submission owns this segment; reconcile first')
+    os.close(fd)
+    try:
+        state = _read(root, idea, segment)
+        if any(a['key'] == key for a in state['attempts']):
+            raise GuardError('Same render key has already been submitted')
+        if len(state['attempts']) >= 2:
+            raise GuardError('Render budget exhausted')
+        state['attempts'].append({'key':key, 'status':'submission_intent'})
+        temp = p.with_suffix('.tmp')
+        with temp.open('w', encoding='utf8') as f:
+            json.dump(state, f)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(temp, p)
+        return state
+    finally:
+        guard_lock.unlink()
