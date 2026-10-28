@@ -25,7 +25,7 @@
     ],
     "script": [
       "python",
-      "adapters/reviewed_script_prompt.py"
+      "adapters/gemini_script_worker.py"
     ],
     "frame": [
       "python",
