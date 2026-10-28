@@ -10,6 +10,7 @@ from browser_video import Blocked, Job, MCP, lock
 from production_guard import GuardError, check_timeline, reserve_submission, check_production_status
 from export_browser_packet import verify_packet_live
 from timeline_guard import validate_timeline
+from approval_guard import verify_approval
 
 
 def main():
@@ -58,6 +59,7 @@ def main():
                 raise Blocked('Prepared only; --send-confirmed required for render')
             try:
                 verify_packet_live(packet)
+                verify_approval(packet.get('timeline'), args.idea)
                 check_production_status(packet.get('production_status',''))
                 validate_timeline(packet)
                 reserve_submission(Path(args.runtime), args.idea, packet['segment_id'], job.key, True, args.revision_approved)
