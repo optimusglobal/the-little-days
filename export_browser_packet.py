@@ -10,6 +10,7 @@ from browser_video import Blocked, atomic, require_packet, sha
 from runner import Sheets, plan, resolve, cell
 from timeline_guard import validate_timeline
 from character_dialogue_guard import validate_character_dialogue
+from source_dialogue_guard import verify_source_dialogue
 from approval_guard import verify_approval
 import hashlib
 
@@ -80,6 +81,7 @@ def verify_packet_live(packet, config_path='config.example.json'):
         raise Blocked('Selected segment prompt differs from approved timeline')
     validate_timeline(packet)
     validate_character_dialogue(packet)
+    verify_source_dialogue(packet)
     return True
 
 def main():
@@ -135,6 +137,7 @@ def main():
     require_packet(packet)
     validate_timeline(packet)
     validate_character_dialogue(packet)
+    verify_source_dialogue(packet)
     # Re-read to avoid binding new sheet prompt to stale downloaded assets.
     current = sheet.read()
     current_entry = plan(current, config, args.idea)[0]
