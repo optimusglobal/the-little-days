@@ -9,6 +9,7 @@ from urllib.parse import parse_qs, urlsplit
 from browser_video import Blocked, atomic, require_packet, sha
 from runner import Sheets, plan, resolve, cell
 from timeline_guard import validate_timeline
+from character_dialogue_guard import validate_character_dialogue
 from approval_guard import verify_approval
 import hashlib
 
@@ -78,6 +79,7 @@ def verify_packet_live(packet, config_path='config.example.json'):
     if packet.get('prompt') != select_segment_prompt(packet['timeline'], packet['segment_id'], expected['prompt']):
         raise Blocked('Selected segment prompt differs from approved timeline')
     validate_timeline(packet)
+    validate_character_dialogue(packet)
     return True
 
 def main():
@@ -132,6 +134,7 @@ def main():
         packet[field + '_sha256'] = sha(packet[field + '_path'])
     require_packet(packet)
     validate_timeline(packet)
+    validate_character_dialogue(packet)
     # Re-read to avoid binding new sheet prompt to stale downloaded assets.
     current = sheet.read()
     current_entry = plan(current, config, args.idea)[0]
