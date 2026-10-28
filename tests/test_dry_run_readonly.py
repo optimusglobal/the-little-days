@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 from dry_run_readonly import inspect
+from production_guard import GuardError
 
 class FakeSheet:
     def __init__(self, config): pass
@@ -26,9 +27,11 @@ class DryRunTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             path=Path(td)/'config.json'
             path.write_text(json.dumps({'header_row':4,'headers':{'frame':'Frame 0'}}),encoding='utf8')
-            with patch('dry_run_readonly.Sheets',FakeSheet),patch('dry_run_readonly.check_historical_lock',side_effect=Exception('historical lock')):
-                with self.assertRaises(Exception):
-                    inspect('IDEA_002',str(path))
+            with patch('dry_run_readonly.Sheets',FakeSheet),patch('dry_run_readonly.check_historical_lock',side_effect=GuardError('historical lock')):
+                result=inspect('IDEA_002',str(path))
+                self.assertEqual(result['historical_lock'],'BLOCK')
+                self.assertEqual(result['decision'],'NO_GO')
+                self.assertEqual(result['render'],'NEVER_SUBMITTED')
             # Script source contains no submission or ledger-writing calls.
             source=Path('dry_run_readonly.py').read_text(encoding='utf8')
             self.assertNotIn('job.submit(',source)
