@@ -18,7 +18,7 @@ def verify_drive_image(session, url):
             and 0 < int(info.get('size','0')) <= 25*1024*1024)
 
 
-def inspect(idea, config_path='config.example.json', timeline_path=None):
+def inspect(idea, config_path='config.example.json', timeline_path=None, session=None):
     config=json.loads(Path(config_path).read_text(encoding='utf8'))
     data=Sheets(config).read()
     result={'idea_id':idea,'sheet':'PASS','L5':'BLOCK','historical_lock':'BLOCK',
@@ -29,9 +29,10 @@ def inspect(idea, config_path='config.example.json', timeline_path=None):
     row=matching[0]
     reference=cell(data['rows'][0],11)
     frame=cell(row,resolve(data['headers'],config['headers']['frame']))
-    import google.auth
-    from google.auth.transport.requests import AuthorizedSession
-    session=AuthorizedSession(google.auth.default(scopes=['https://www.googleapis.com/auth/drive.readonly'])[0])
+    if session is None:
+        import google.auth
+        from google.auth.transport.requests import AuthorizedSession
+        session=AuthorizedSession(google.auth.default(scopes=['https://www.googleapis.com/auth/drive.readonly'])[0])
     for field,url in (('L5',reference),('frame',frame)):
         try:
             result[field]='PASS' if url and verify_drive_image(session,url) else 'BLOCK'
