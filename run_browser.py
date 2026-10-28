@@ -7,7 +7,7 @@ import subprocess
 import sys
 import time
 from browser_video import Blocked, Job, MCP, lock
-from production_guard import GuardError, check_timeline, authorize_submission, record_attempt
+from production_guard import GuardError, check_timeline, authorize_submission, record_attempt, check_production_status
 
 
 def main():
@@ -47,14 +47,13 @@ def main():
             print(json.dumps({'status':job.state['status'],'record':str(job.path)}))
             return
         if job.state['status']=='prepared':
-            if any(x in packet.get('production_status','').casefold() for x in ('on-hold','on hold','tạm dừng','pause','đang chặn','bị chặn')):
-                raise Blocked('Production is on hold; do not render')
             if not args.send_confirmed:
                 raise Blocked('Prepared only; --send-confirmed required for render')
             try:
+                check_production_status(packet.get('production_status',''))
                 check_timeline(packet.get('script', ''), packet['prompt'])
                 authorize_submission(Path(args.runtime), args.idea, packet['segment_id'], True, args.revision_approved)
-                record_attempt(Path(args.runtime), args.idea, args.segment, job.key)
+                record_attempt(Path(args.runtime), args.idea, packet['segment_id'], job.key)
             except GuardError as exc:
                 raise Blocked(str(exc))
             job.submit()
