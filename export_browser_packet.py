@@ -8,6 +8,7 @@ import re
 from urllib.parse import parse_qs, urlsplit
 from browser_video import Blocked, atomic, require_packet, sha
 from runner import Sheets, plan, resolve, cell
+from timeline_guard import validate_timeline
 
 
 def drive_id(url):
@@ -61,6 +62,7 @@ def verify_packet_live(packet, config_path='config.example.json'):
     if expected['production_status'] != 'Sẵn sàng':
         raise Blocked('Production status is not explicitly ready')
     require_packet(packet)
+    validate_timeline(packet)
     return True
 
 def main():
@@ -68,9 +70,14 @@ def main():
     ap.add_argument('--idea', required=True)
     ap.add_argument('--config', default='config.example.json')
     ap.add_argument('--model', default='Argon')
+    ap.add_argument('--timeline', required=True, help='Preapproved timeline JSON; never auto-author creative content')
+    ap.add_argument('--segment', required=True, help='Explicit approved segment ID')
     ap.add_argument('--output', default='.runtime/packets')
     args = ap.parse_args()
     config = json.loads(Path(args.config).read_text(encoding='utf-8'))
+    timeline = json.loads(Path(args.timeline).read_text(encoding='utf-8'))
+    if timeline.get('approval') != 'approved' or timeline.get('idea_id') != args.idea:
+        raise Blocked('Timeline must be independently approved for exact idea')
     sheet = Sheets(config)
     live = sheet.read()
     entry = plan(live, config, args.idea)[0]
@@ -98,11 +105,13 @@ def main():
     packet = {'idea_id': entry['idea_id'], 'source': entry['source'],
               'frame_url': fields['frame'], 'reference_url': fields['reference'],
               'prompt': fields['prompt'], 'script': fields['script'], 'service': fields['service'], 'mode': fields['mode'],
-              'model': args.model, 'version': version, 'segment_id': '01', 'production_status': production_status}
+              'model': args.model, 'version': version, 'segment_id': args.segment, 'production_status': production_status,
+              'timeline': timeline}
     for field in ('frame', 'reference'):
         packet[field + '_path'] = str(folder / (field + '.png'))
         packet[field + '_sha256'] = sha(packet[field + '_path'])
     require_packet(packet)
+    validate_timeline(packet)
     # Re-read to avoid binding new sheet prompt to stale downloaded assets.
     current = sheet.read()
     current_entry = plan(current, config, args.idea)[0]
