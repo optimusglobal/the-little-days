@@ -6,6 +6,8 @@ from runner import Sheets, cell, resolve, plan
 from production_guard import check_historical_lock, GuardError
 from approval_guard import verify_approval
 from timeline_guard import validate_timeline
+from character_dialogue_guard import validate_character_dialogue
+from source_dialogue_guard import verify_source_dialogue
 from export_browser_packet import select_segment_prompt, drive_id
 
 def verify_drive_image(session, url):
@@ -54,12 +56,17 @@ def inspect(idea, config_path='config.example.json', timeline_path=None, session
         script=cell(row,resolve(data['headers'],config['headers']['script']))
         master=cell(row,resolve(data['headers'],config['headers']['prompt']))
         result['timeline']='BLOCK'
+        result['dialogue']='BLOCK'
         for segment in timeline.get('segments',[]):
             sid=segment['segment_id']
             prompt=select_segment_prompt(timeline,sid,master)
-            packet={'script':script,'prompt':prompt,'segment_id':sid,'timeline':timeline}
+            packet={'script':script,'prompt':prompt,'segment_id':sid,'timeline':timeline,'reference_url':reference}
             validate_timeline(packet)
+            validate_character_dialogue(packet)
+            verify_source_dialogue(packet)
         result['timeline']='PASS'
+        result['dialogue']='PASS'
+        result['packet']='NOT_EXPORTED_DRY_RUN'
     result['decision']='NO_GO' # A dry-run cannot grant production permission.
     return result
 
