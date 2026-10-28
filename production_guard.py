@@ -8,7 +8,7 @@ class GuardError(RuntimeError):
     pass
 
 def _seconds(text):
-    m = re.search(r'(?i)(?:master\s*[—:-]\s*)?(\d+(?:\.\d+)?)\s*(?:seconds?|s)\b', text)
+    m = re.search(r'(?i)(?:master\s*[—:-]\s*)?(\d+(?:\.\d+)?)\s*[-‑–]?\s*(?:seconds?|s)\b', text)
     return float(m.group(1)) if m else None
 
 def _quotes(text):
@@ -28,6 +28,12 @@ def check_timeline(script, prompt):
     for quote in _quotes(script):
         if quote not in prompt.casefold():
             raise GuardError('Dialogue missing from prompt: '+quote[:48])
+    return True
+
+def check_production_status(status):
+    value = str(status or '').casefold().strip()
+    if any(label in value for label in ('bị chặn', 'đang chặn', 'tạm dừng', 'on-hold', 'on hold', 'pause')):
+        raise GuardError('Production is blocked or on hold')
     return True
 
 def _ledger(root, idea, segment):
