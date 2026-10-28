@@ -24,6 +24,8 @@ class ExportTests(unittest.TestCase):
         FakeSheets.status='Sẵn sàng';FakeSheets.calls=0;FakeSheets.change_after_first=False
         self.config={'header_row':4,'headers':{'hook':'Hook','insight':'Insight','angle':'Angle','idea':'Idea mới','script':'Kịch bản / Storyboard','reference':'Ảnh tham chiếu','frame':'Frame 0','prompt':'Prompt video','service':'AI tạo video','mode':'Chế độ / điểm dừng'}}
         self.timeline={'idea_id':'IDEA_DEMO','approval':'approved','schema_version':1,'script_sha256':hashlib.sha256('16 seconds. Actor: "Hello"'.encode()).hexdigest(),'master_prompt_sha256':hashlib.sha256(b'MASTER PROMPT').hexdigest(),'total_duration':16,'segments':[{'segment_id':f'0{i}','start':(i-1)*8,'end':i*8,'prompt':f'8 seconds. Actor: "Hello". Action {i}','dialogue':[{'speaker':'Actor','text':'Hello'}],'required_actions':[f'Action {i}']} for i in (1,2)]}
+        self.timeline['character_dialogue_contract']={'schema_version':2,'cast':[{'id':'Actor','identity_reference':'L5'}],
+            'dialogue_manifest':[{'segment_id':f'0{i}','speaker':'Actor','text':'Hello'} for i in (1,2)]}
         (self.root/'timeline.json').write_text(json.dumps(self.timeline))
         (self.root/'config.json').write_text(json.dumps(self.config))
     def run_segment(self,sid):
