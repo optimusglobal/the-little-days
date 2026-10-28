@@ -17,6 +17,8 @@ def main():
     ap.add_argument('--idea', required=True)
     ap.add_argument('--packet', help='Use an already exported, verified packet')
     ap.add_argument('--model', default='Argon')
+    ap.add_argument('--timeline', help='Approved timeline JSON required for exporting a new packet')
+    ap.add_argument('--segment', help='Approved timeline segment ID')
     ap.add_argument('--conversation', help='Explicitly recover an existing Gemini result, never submit again')
     ap.add_argument('--prepare-only', action='store_true')
     ap.add_argument('--send-confirmed', action='store_true')
@@ -27,7 +29,10 @@ def main():
     if args.packet:
         packet_path=Path(args.packet)
     else:
-        process=subprocess.run([sys.executable,'export_browser_packet.py','--idea',args.idea,'--model',args.model],
+        if not args.timeline or not args.segment:
+            raise Blocked('Approved --timeline and --segment are required for export')
+        process=subprocess.run([sys.executable,'export_browser_packet.py','--idea',args.idea,'--model',args.model,
+                                '--timeline',args.timeline,'--segment',args.segment],
                                capture_output=True,text=True,encoding='utf-8')
         if process.returncode:
             raise Blocked('Sheet/Drive export failed; check local Google credentials and sharing')
