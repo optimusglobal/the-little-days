@@ -43,6 +43,15 @@ def main():
         raise Blocked('Packet must contain a stable segment_id')
     if packet['idea_id'] != args.idea:
         raise Blocked('Packet idea ID differs from requested idea')
+    # Fail closed before constructing MCP/Job or performing any browser side effects.
+    if not args.conversation:
+        try:
+            verify_packet_live(packet)
+            verify_approval(packet.get('timeline'), args.idea)
+            check_production_status(packet.get('production_status',''))
+            validate_timeline(packet)
+        except (GuardError, Blocked) as exc:
+            raise Blocked(str(exc))
     job=Job(packet,args.runtime,MCP())
     with lock(job.folder):
         if job.state['status']=='downloaded':
