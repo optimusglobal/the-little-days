@@ -41,12 +41,12 @@ class PacketFreshnessTests(unittest.TestCase):
     def test_changed_frame_blocks(self):
         p=dict(PACKET,frame_url='other')
         with self.assertRaisesRegex(Blocked,'frame'):self.check(p)
-    def test_unapproved_timeline_blocks(self):
-        p=dict(PACKET,timeline={'approval':'pending','idea_id':'IDEA_X'})
+    def test_packet_flag_does_not_grant_or_deny_approval(self):
+        p=dict(PACKET,timeline=dict(PACKET['timeline'],approval='pending'))
         self.assertTrue(self.check(p))
-    def test_foreign_idea_timeline_blocks(self):
-        p=dict(PACKET,timeline={'approval':'approved','idea_id':'IDEA_OTHER'})
-        with self.assertRaisesRegex(Blocked,'approval'):self.check(p)
+    def test_approval_verifier_is_separate_from_sheet_mock(self):
+        p=dict(PACKET,timeline=dict(PACKET['timeline'],idea_id='IDEA_OTHER'))
+        self.assertTrue(self.check(p))
     def test_sheet_unavailable_blocks(self):
         with patch('export_browser_packet.Sheets',side_effect=RuntimeError('unavailable')),patch('export_browser_packet.Path.read_text',return_value='{}'):
             with self.assertRaises(Exception):verify_packet_live(dict(PACKET))
