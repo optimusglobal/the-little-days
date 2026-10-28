@@ -47,7 +47,7 @@ class ProductionGuardTests(unittest.TestCase):
         from pathlib import Path
         source = Path('run_browser.py').read_text(encoding='utf8')
         self.assertNotIn('args.segment', source)
-        self.assertIn("record_attempt(Path(args.runtime), args.idea, packet['segment_id'], job.key)", source)
+        self.assertIn("reserve_submission(Path(args.runtime), args.idea, packet['segment_id'], job.key, True, args.revision_approved)", source)
 
     def test_historical_lock_blocks_idea_even_with_permission(self):
         import json
@@ -72,6 +72,35 @@ class ProductionGuardTests(unittest.TestCase):
             for runtime in (first, second):
                 with self.assertRaisesRegex(GuardError,'Historical render'):
                     authorize_submission(Path(runtime),'IDEA_002','01',True,True)
+
+    def test_atomic_reservation_budget_revision_and_replay(self):
+        from production_guard import reserve_submission, CONTROL_ROOT
+        import json
+        with TemporaryDirectory() as tmp:
+            root=Path(tmp)
+            with self.assertRaisesRegex(GuardError,'confirmation'):
+                reserve_submission(root,'IDEA_X','01','key1',False,False)
+            reserve_submission(root,'IDEA_X','01','key1',True,False)
+            with self.assertRaisesRegex(GuardError,'Same render key'):
+                reserve_submission(root,'IDEA_X','01','key1',True,True)
+            with self.assertRaisesRegex(GuardError,'Revision'):
+                reserve_submission(root,'IDEA_X','01','key2',True,False)
+            reserve_submission(root,'IDEA_X','01','key2',True,True)
+            with self.assertRaisesRegex(GuardError,'budget'):
+                reserve_submission(root,'IDEA_X','01','key3',True,True)
+            p=CONTROL_ROOT/'render-ledger'/'IDEA_X_01.json'
+            self.assertEqual(len(json.loads(p.read_text())['attempts']),2)
+
+    def test_atomic_lock_and_runtime_change(self):
+        from production_guard import reserve_submission, CONTROL_ROOT
+        with TemporaryDirectory() as first, TemporaryDirectory() as second:
+            reserve_submission(first,'IDEA_Y','01','key1',True,False)
+            with self.assertRaisesRegex(GuardError,'Revision'):
+                reserve_submission(second,'IDEA_Y','01','key2',True,False)
+            p=CONTROL_ROOT/'render-ledger'/'IDEA_Y_01.lock'
+            p.write_text('busy')
+            with self.assertRaisesRegex(GuardError,'Another submission'):
+                reserve_submission(second,'IDEA_Y','01','key2',True,True)
 
     def test_explicit_authorization_required(self):
         with TemporaryDirectory() as tmp:
