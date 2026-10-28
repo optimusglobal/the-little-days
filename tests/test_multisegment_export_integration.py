@@ -26,6 +26,9 @@ class ExportTests(unittest.TestCase):
         self.timeline={'idea_id':'IDEA_DEMO','approval':'approved','schema_version':1,'script_sha256':hashlib.sha256('16 seconds. Actor: "Hello"'.encode()).hexdigest(),'master_prompt_sha256':hashlib.sha256(b'MASTER PROMPT').hexdigest(),'total_duration':16,'segments':[{'segment_id':f'0{i}','start':(i-1)*8,'end':i*8,'prompt':f'8 seconds. Actor: "Hello". Action {i}','dialogue':[{'speaker':'Actor','text':'Hello'}],'required_actions':[f'Action {i}']} for i in (1,2)]}
         self.timeline['character_dialogue_contract']={'schema_version':2,'cast':[{'id':'Actor','identity_reference':'L5'}],
             'dialogue_manifest':[{'segment_id':f'0{i}','speaker':'Actor','text':'Hello'} for i in (1,2)]}
+        self.timeline['source_dialogue_contract']={'schema_version':1,
+            'script_sha256':hashlib.sha256('16 seconds. Actor: "Hello"'.encode()).hexdigest(),
+            'source_turns':[{'speaker':'Actor','text':'Hello'},{'speaker':'Actor','text':'Hello'}]}
         (self.root/'timeline.json').write_text(json.dumps(self.timeline))
         (self.root/'config.json').write_text(json.dumps(self.config))
     def run_segment(self,sid):
