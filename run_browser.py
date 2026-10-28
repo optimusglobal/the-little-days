@@ -7,6 +7,7 @@ import subprocess
 import sys
 import time
 from browser_video import Blocked, Job, MCP, lock
+from production_guard import GuardError, check_timeline, authorize_submission, record_attempt
 
 
 def main():
@@ -16,6 +17,9 @@ def main():
     ap.add_argument('--model', default='Argon')
     ap.add_argument('--conversation', help='Explicitly recover an existing Gemini result, never submit again')
     ap.add_argument('--prepare-only', action='store_true')
+    ap.add_argument('--send-confirmed', action='store_true')
+    ap.add_argument('--revision-approved', action='store_true')
+    ap.add_argument('--segment', default='01')
     ap.add_argument('--runtime', default=os.environ.get('WL_BROWSER_RUNTIME','.runtime/browser'))
     ap.add_argument('--output', default=str(Path.home()/'Videos'/'TheLittleDays'))
     args=ap.parse_args()
@@ -42,6 +46,14 @@ def main():
             print(json.dumps({'status':job.state['status'],'record':str(job.path)}))
             return
         if job.state['status']=='prepared':
+            if not args.send_confirmed:
+                raise Blocked('Prepared only; --send-confirmed required for render')
+            try:
+                check_timeline(packet.get('script', ''), packet['prompt'])
+                authorize_submission(Path(args.runtime), args.idea, args.segment, True, args.revision_approved)
+                record_attempt(Path(args.runtime), args.idea, args.segment, job.key)
+            except GuardError as exc:
+                raise Blocked(str(exc))
             job.submit()
         if job.state['status']=='submission_uncertain':
             raise Blocked('Submission uncertain; recover exact conversation rather than sending again')
