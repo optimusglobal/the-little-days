@@ -53,6 +53,9 @@ class EndToEndOfflineTests(unittest.TestCase):
             'total_duration':12,'segments':[{'segment_id':'01','start':0,'end':12,
                         'prompt':PROMPT,'dialogue':[{'speaker':'Daughter','text':'Hello'}],
                         'required_actions':['She smiles']}]}
+        self.timeline['character_dialogue_contract']={'schema_version':2,
+            'cast':[{'id':'Daughter','identity_reference':'L5'}],
+            'dialogue_manifest':[{'segment_id':'01','speaker':'Daughter','text':'Hello'}]}
         self.packet={'idea_id':'IDEA_DEMO','segment_id':'01','script':SCRIPT,'master_prompt':MASTER,
              'prompt':PROMPT,'timeline':self.timeline,'source':'source','frame_url':'frame',
              'reference_url':'ref','service':'Gemini','mode':'Làm đến video',
