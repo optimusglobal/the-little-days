@@ -17,7 +17,7 @@ def verify_source_dialogue(packet):
     if not isinstance(script,str) or contract.get('script_sha256')!=hashlib.sha256(script.encode('utf8')).hexdigest():
         raise GuardError('Source dialogue not bound to exact script')
     # Only verifiable explicit Speaker: quoted-dialogue source format is admitted.
-    extracted=re.findall(r'([A-Za-z][A-Za-z0-9_-]{0,39}):\\s*[\"“]([^\"”]+)[\"”]',script)
+    extracted=re.findall(r'([A-Za-z][A-Za-z0-9_-]{0,39}):\s*[\"“]([^\"”]+)[\"”]',script)
     if not extracted:
         raise GuardError('Source script has no machine-verifiable attributed dialogue; human transcription needed')
     turns=contract.get('source_turns')
