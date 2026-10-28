@@ -9,6 +9,7 @@ from urllib.parse import parse_qs, urlsplit
 from browser_video import Blocked, atomic, require_packet, sha
 from runner import Sheets, plan, resolve, cell
 from timeline_guard import validate_timeline
+from approval_guard import verify_approval
 import hashlib
 
 def select_segment_prompt(timeline, segment_id, master_prompt):
@@ -73,8 +74,7 @@ def verify_packet_live(packet, config_path='config.example.json'):
     if expected['production_status'] != 'Sẵn sàng':
         raise Blocked('Production status is not explicitly ready')
     require_packet(packet)
-    if packet.get('timeline', {}).get('approval') != 'approved' or packet['timeline'].get('idea_id') != packet['idea_id']:
-        raise Blocked('Timeline approval is missing or belongs to another idea')
+    verify_approval(packet.get('timeline'), packet['idea_id'])
     if packet.get('prompt') != select_segment_prompt(packet['timeline'], packet['segment_id'], expected['prompt']):
         raise Blocked('Selected segment prompt differs from approved timeline')
     validate_timeline(packet)
@@ -91,8 +91,7 @@ def main():
     args = ap.parse_args()
     config = json.loads(Path(args.config).read_text(encoding='utf-8'))
     timeline = json.loads(Path(args.timeline).read_text(encoding='utf-8'))
-    if timeline.get('approval') != 'approved' or timeline.get('idea_id') != args.idea:
-        raise Blocked('Timeline must be independently approved for exact idea')
+    verify_approval(timeline, args.idea)
     sheet = Sheets(config)
     live = sheet.read()
     entry = plan(live, config, args.idea)[0]
