@@ -13,8 +13,10 @@ def inspect(idea, config_path='config.example.json', timeline_path=None):
     data=Sheets(config).read()
     result={'idea_id':idea,'sheet':'PASS','L5':'BLOCK','historical_lock':'BLOCK',
             'timeline':'NOT_TESTED','approval':'NOT_TESTED','packet':'NOT_TESTED','render':'NEVER_SUBMITTED'}
-    entry=plan(data,config,idea)[0]
-    row=data['rows'][entry['row_number']-config['header_row']-1]
+    matching=[r for r in data['rows'] if cell(r,0)==idea]
+    if len(matching)!=1:
+        raise ValueError('Expected exactly one matching idea row')
+    row=matching[0]
     reference=cell(data['rows'][0],11)
     frame=cell(row,resolve(data['headers'],config['headers']['frame']))
     result['L5']='PASS' if reference and drive_id(reference) else 'BLOCK'
