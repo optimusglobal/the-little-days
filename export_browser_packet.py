@@ -107,7 +107,10 @@ def main():
         raise Blocked('Source-to-Frame0 production is not complete; do not invent missing assets')
     # Hash of data, never idea ID as a filesystem component.
     import hashlib
-    folder = Path(args.output).resolve() / hashlib.sha256(args.idea.encode()).hexdigest()[:16]
+    if not re.fullmatch(r'[A-Za-z0-9_-]{1,24}', args.segment):
+        raise Blocked('Invalid segment ID')
+    folder = (Path(args.output).resolve() / hashlib.sha256(args.idea.encode()).hexdigest()[:16]
+              / args.segment)
     folder.mkdir(parents=True, exist_ok=True)
     import google.auth
     from google.auth.transport.requests import AuthorizedSession
