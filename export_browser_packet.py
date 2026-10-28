@@ -58,6 +58,8 @@ def main():
               for key in ('frame', 'prompt', 'reference', 'service', 'mode', 'script')}
     # L5 is the one canonical character identity image for every row.
     fields['reference'] = cell(live['rows'][0], 11)
+    status_index = resolve(live['headers'], 'Trạng thái sản xuất')
+    production_status = cell(row, status_index)
     if not fields['frame'] or not fields['prompt'] or not fields['reference'] or not fields['script']:
         raise Blocked('Source-to-Frame0 production is not complete; do not invent missing assets')
     # Hash of data, never idea ID as a filesystem component.
@@ -75,7 +77,7 @@ def main():
     packet = {'idea_id': entry['idea_id'], 'source': entry['source'],
               'frame_url': fields['frame'], 'reference_url': fields['reference'],
               'prompt': fields['prompt'], 'script': fields['script'], 'service': fields['service'], 'mode': fields['mode'],
-              'model': args.model, 'version': version, 'segment_id': '01'}
+              'model': args.model, 'version': version, 'segment_id': '01', 'production_status': production_status}
     for field in ('frame', 'reference'):
         packet[field + '_path'] = str(folder / (field + '.png'))
         packet[field + '_sha256'] = sha(packet[field + '_path'])
@@ -87,6 +89,8 @@ def main():
     current_fields = {key: cell(current_row, resolve(current['headers'], config['headers'][key]))
                       for key in fields}
     current_fields['reference'] = cell(current['rows'][0], 11)
+    if cell(current_row, resolve(current['headers'], 'Trạng thái sản xuất')) != production_status:
+        raise Blocked('Production status changed during export')
     if current['headers'] != live['headers'] or current_entry != entry or current_fields != fields:
         raise Blocked('Row changed during export; rerun before any submission')
     atomic(folder / 'packet.json', packet)
