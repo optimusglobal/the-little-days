@@ -4,6 +4,8 @@ import os
 from pathlib import Path
 import re
 
+CONTROL_ROOT = Path.home() / '.the-little-days' / 'render-control'
+
 class GuardError(RuntimeError):
     pass
 
@@ -46,8 +48,11 @@ def _read(root, idea, segment):
 
 def check_historical_lock(root, idea):
     safe = re.sub(r'[^a-zA-Z0-9_-]', '_', idea)
-    marker = Path(root) / 'historical-locks' / (safe + '.json')
-    if marker.exists():
+    if not CONTROL_ROOT.is_dir() or not (CONTROL_ROOT / '.initialized').is_file():
+        raise GuardError('Central render control is uninitialized; fail closed')
+    marker = CONTROL_ROOT / 'historical-locks' / (safe + '.json')
+    legacy_marker = Path(root) / 'historical-locks' / (safe + '.json')
+    if marker.exists() or legacy_marker.exists():
         raise GuardError('Historical render reconciliation required; do not submit')
     return True
 
