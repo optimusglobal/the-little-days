@@ -45,7 +45,7 @@ class CliIntegrationTests(unittest.TestCase):
                 def __init__(self,*args):
                     super().__init__(*args)
                     if uncertain: self.state['status']='submission_uncertain'
-            with patch('production_guard.CONTROL_ROOT',Path(directory)/'control'),patch('sys.argv',argv),patch('run_browser.Job',ScenarioJob),patch('run_browser.MCP',return_value=object()),patch('run_browser.verify_packet_live',return_value=True),patch('run_browser.validate_timeline',side_effect=lambda p: True if p.get('script') and '12s' in p['script'] and '12 seconds' in p.get('prompt','') else (_ for _ in ()).throw(Blocked('Segment duration or script missing'))),patch('run_browser.lock',return_value=contextlib.nullcontext()):
+            with patch('production_guard.CONTROL_ROOT',Path(directory)/'control'),patch('sys.argv',argv),patch('run_browser.Job',ScenarioJob),patch('run_browser.MCP',return_value=object()),patch('run_browser.verify_packet_live',return_value=True),patch('run_browser.validate_timeline',side_effect=lambda p: True if p.get('script') and '12 seconds' in p.get('prompt','') else (_ for _ in ()).throw(Blocked('Script and prompt must both be present' if not p.get('script') else 'Segment duration mismatch'))),patch('run_browser.lock',return_value=contextlib.nullcontext()):
                 try:
                     run_browser.main()
                     outcome='accepted'
