@@ -5,6 +5,16 @@ from tempfile import TemporaryDirectory
 from production_guard import check_timeline, authorize_submission, record_attempt, GuardError
 
 class ProductionGuardTests(unittest.TestCase):
+    def setUp(self):
+        from unittest.mock import patch
+        self._control_tmp = TemporaryDirectory()
+        self.addCleanup(self._control_tmp.cleanup)
+        root = Path(self._control_tmp.name)
+        (root / '.initialized').write_text('ready', encoding='utf8')
+        p = patch('production_guard.CONTROL_ROOT', root)
+        p.start()
+        self.addCleanup(p.stop)
+
     def test_script_prompt_duration_conflict(self):
         with self.assertRaises(GuardError):
             check_timeline("One continuous shot. 12 seconds.", "MASTER — 16 seconds. Cut to close-up.")
@@ -44,12 +54,24 @@ class ProductionGuardTests(unittest.TestCase):
         from production_guard import check_historical_lock
         with TemporaryDirectory() as tmp:
             root=Path(tmp)
-            hold=root/'historical-locks'
+            from production_guard import CONTROL_ROOT
+            hold=CONTROL_ROOT/'historical-locks'
             hold.mkdir()
             (hold/'IDEA_002.json').write_text(json.dumps({'idea_id':'IDEA_002','status':'unreconciled'}),encoding='utf-8')
             with self.assertRaises(GuardError):
                 check_historical_lock(root,'IDEA_002')
             check_historical_lock(root,'IDEA_001')
+
+    def test_switching_runtime_cannot_bypass_central_lock(self):
+        from production_guard import CONTROL_ROOT
+        import json
+        marker=CONTROL_ROOT/'historical-locks'/'IDEA_002.json'
+        marker.parent.mkdir(parents=True,exist_ok=True)
+        marker.write_text(json.dumps({'status':'unreconciled'}),encoding='utf8')
+        with TemporaryDirectory() as first, TemporaryDirectory() as second:
+            for runtime in (first, second):
+                with self.assertRaisesRegex(GuardError,'Historical render'):
+                    authorize_submission(Path(runtime),'IDEA_002','01',True,True)
 
     def test_explicit_authorization_required(self):
         with TemporaryDirectory() as tmp:
