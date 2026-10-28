@@ -22,6 +22,18 @@
     "idea": [
       "python",
       "adapters/gemini_analysis_idea.py"
+    ],
+    "script": [
+      "python",
+      "adapters/reviewed_script_prompt.py"
+    ],
+    "frame": [
+      "python",
+      "adapters/reviewed_frame.py"
+    ],
+    "prompt": [
+      "python",
+      "adapters/reviewed_script_prompt.py"
     ]
   }
 }
