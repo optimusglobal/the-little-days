@@ -85,6 +85,14 @@ class CliIntegrationTests(unittest.TestCase):
                 with self.assertRaisesRegex(Blocked,'stale sheet'):run_browser.main()
                 mcp.assert_not_called()
                 job.assert_not_called()
+    def test_missing_approval_blocks_before_mcp(self):
+        with tempfile.TemporaryDirectory() as td:
+            p=Path(td)/'packet.json'
+            p.write_text(json.dumps({'idea_id':'IDEA_TEST','segment_id':'01'}),encoding='utf8')
+            argv=['run_browser.py','--idea','IDEA_TEST','--packet',str(p),'--prepare-only']
+            with patch('sys.argv',argv),patch('run_browser.verify_packet_live',return_value=True),patch('run_browser.verify_approval',side_effect=Blocked('approval receipt missing')),patch('run_browser.MCP',side_effect=AssertionError('MCP must not start')) as mcp:
+                with self.assertRaisesRegex(Blocked,'approval receipt missing'):run_browser.main()
+                mcp.assert_not_called()
     def test_authorized_job_calls_mock_submit_once(self):
         outcome,count=self.exercise(send=True)
         self.assertEqual(outcome,'accepted')
