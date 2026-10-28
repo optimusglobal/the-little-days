@@ -1,5 +1,10 @@
 name: Signed Receipt Integration — Ephemeral Key Safe Test
 on:
+  push:
+    branches:
+      - feature/p0-render-safety-prompt-integrity
+    paths:
+      - '.github/workflows/signed-receipt-ephemeral-test.yml'
   workflow_dispatch:
 permissions:
   contents: read
