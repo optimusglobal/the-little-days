@@ -19,7 +19,6 @@ def main():
     ap.add_argument('--prepare-only', action='store_true')
     ap.add_argument('--send-confirmed', action='store_true')
     ap.add_argument('--revision-approved', action='store_true')
-    ap.add_argument('--segment', default='01')
     ap.add_argument('--runtime', default=os.environ.get('WL_BROWSER_RUNTIME','.runtime/browser'))
     ap.add_argument('--output', default=str(Path.home()/'Videos'/'TheLittleDays'))
     args=ap.parse_args()
@@ -32,6 +31,8 @@ def main():
             raise Blocked('Sheet/Drive export failed; check local Google credentials and sharing')
         packet_path=Path(json.loads(process.stdout)['packet'])
     packet=json.loads(packet_path.read_text(encoding='utf-8'))
+    if not packet.get('segment_id') or not isinstance(packet['segment_id'], str):
+        raise Blocked('Packet must contain a stable segment_id')
     if packet['idea_id'] != args.idea:
         raise Blocked('Packet idea ID differs from requested idea')
     job=Job(packet,args.runtime,MCP())
@@ -50,7 +51,7 @@ def main():
                 raise Blocked('Prepared only; --send-confirmed required for render')
             try:
                 check_timeline(packet.get('script', ''), packet['prompt'])
-                authorize_submission(Path(args.runtime), args.idea, args.segment, True, args.revision_approved)
+                authorize_submission(Path(args.runtime), args.idea, packet['segment_id'], True, args.revision_approved)
                 record_attempt(Path(args.runtime), args.idea, args.segment, job.key)
             except GuardError as exc:
                 raise Blocked(str(exc))
