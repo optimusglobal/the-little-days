@@ -11,7 +11,6 @@ from pathlib import Path
 from unittest.mock import patch
 import run_browser
 from approval_guard import digest
-from browser_video import Blocked
 
 SCRIPT='12 seconds. Daughter: "Hello"'
 PROMPT='12 seconds. Daughter: "Hello". She smiles'
@@ -71,7 +70,6 @@ class EndToEndOfflineTests(unittest.TestCase):
               '--runtime',str(runtime)]
         if send:argv+=['--send-confirmed']
         with patch('sys.argv',argv),patch('export_browser_packet.Sheets',FakeSheets),\
-             patch('export_browser_packet.Path.read_text',side_effect=None) if False else contextlib.nullcontext(),\
              patch('export_browser_packet.plan',return_value=[{'row_number':5,'source':'source'}]),\
              patch('export_browser_packet.require_packet',return_value='hash'),\
              patch('export_browser_packet.json.loads',wraps=json.loads),\
@@ -79,10 +77,7 @@ class EndToEndOfflineTests(unittest.TestCase):
              patch('production_guard.CONTROL_ROOT',self.control),\
              patch('run_browser.Job',FakeJob),patch('run_browser.MCP',return_value=object()),\
              patch('run_browser.lock',return_value=contextlib.nullcontext()):
-            old=run_browser.verify_packet_live
             # Mock only file config lookup, preserving all actual verifier gates.
-            from export_browser_packet import verify_packet_live
-            from unittest.mock import mock_open
             real_read=Path.read_text
             def read(path,*a,**kw):
                 if str(path)=='config.example.json':return json.dumps(CONFIG)
