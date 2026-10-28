@@ -33,6 +33,9 @@ class CliIntegrationTests(unittest.TestCase):
             packet_path=Path(directory)/'packet.json'
             packet_path.write_text(json.dumps(packet,ensure_ascii=False),encoding='utf-8')
             runtime=Path(directory)/'runtime'
+            control=Path(directory)/'control'
+            control.mkdir()
+            (control/'.initialized').write_text('ready',encoding='utf8')
             FakeJob.submissions=0
             if budget:
                 record_attempt(runtime,'IDEA_TEST','01','existing-attempt')
@@ -42,7 +45,7 @@ class CliIntegrationTests(unittest.TestCase):
                 def __init__(self,*args):
                     super().__init__(*args)
                     if uncertain: self.state['status']='submission_uncertain'
-            with patch('sys.argv',argv),patch('run_browser.Job',ScenarioJob),patch('run_browser.MCP',return_value=object()),patch('run_browser.lock',return_value=contextlib.nullcontext()):
+            with patch('production_guard.CONTROL_ROOT',Path(directory)/'control'),patch('sys.argv',argv),patch('run_browser.Job',ScenarioJob),patch('run_browser.MCP',return_value=object()),patch('run_browser.lock',return_value=contextlib.nullcontext()):
                 try:
                     run_browser.main()
                     outcome='accepted'
