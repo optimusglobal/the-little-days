@@ -18,6 +18,27 @@ class ProductionGuardTests(unittest.TestCase):
     def test_matching_scene(self):
         check_timeline('12s. One continuous shot. Daughter: "Mama, no."',
                        '12 seconds. Single continuous shot. Daughter says "Mama, no."')
+    def test_hyphenated_duration_is_recognized(self):
+        with self.assertRaisesRegex(GuardError, 'duration mismatch'):
+            check_timeline('12s. Daughter: "Hi"', 'A 16-second film. Daughter says "Hi"')
+
+    def test_duration_spellings_agree(self):
+        check_timeline('12s. Daughter: "Hi"', 'A 12-second film. Daughter says "Hi"')
+
+    def test_blocked_vietnamese_status(self):
+        from production_guard import check_production_status
+        with self.assertRaises(GuardError):
+            check_production_status('Bị chặn')
+        with self.assertRaises(GuardError):
+            check_production_status('On-Hold')
+        check_production_status('Sẵn sàng')
+
+    def test_cli_uses_packet_segment_not_missing_args_segment(self):
+        from pathlib import Path
+        source = Path('run_browser.py').read_text(encoding='utf8')
+        self.assertNotIn('args.segment', source)
+        self.assertIn("record_attempt(Path(args.runtime), args.idea, packet['segment_id'], job.key)", source)
+
     def test_explicit_authorization_required(self):
         with TemporaryDirectory() as tmp:
             with self.assertRaises(GuardError):
