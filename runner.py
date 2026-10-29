@@ -9,6 +9,7 @@ import sys
 import time
 import unicodedata
 from urllib.parse import quote
+import pilot_workflow
 
 STAGES = ('analysis', 'idea', 'script', 'frame', 'prompt', 'video')
 REQUIRED = {
@@ -52,14 +53,29 @@ class Sheets:
 
     def read(self):
         c = self.config
-        rg = "'" + c['tab'].replace("'", "''") + "'!A" + str(c['header_row']) + ':ZZ'
+        rg = "'" + c['tab'].replace("'", "''") + "'!A" + str(c['header_row']) + ':' + c.get('last_column', 'ZZ') + str(c.get('end_row', ''))
         response = self.session.get(self.url + '/values/' + quote(rg, safe=''),
                                     params={'valueRenderOption': 'FORMULA'}, timeout=60)
         response.raise_for_status()
         values = response.json().get('values', [])
         if not values:
             raise ValueError('Sheet has no header row')
-        return {'headers': values[0], 'rows': values[1:]}
+        result = {'headers': values[0], 'rows': values[1:]}
+        if pilot_workflow.enabled(c):
+            spec = pilot_workflow.contract(c)
+            def read_values(range_name):
+                response = self.session.get(self.url + '/values/' + quote(range_name, safe=''),
+                    params={'valueRenderOption': 'UNFORMATTED_VALUE'}, timeout=60)
+                response.raise_for_status()
+                return response.json().get('values', [])
+            prefix = "'" + spec['configuration_tab'].replace("'", "''") + "'!"
+            config_rows = read_values(prefix + spec['configuration_range'])
+            keys = [row[0] for row in config_rows if row]
+            if len(keys) != len(set(keys)):
+                raise ValueError('Duplicate configuration key')
+            result['settings'] = {row[0]: row[1] if len(row)>1 else '' for row in config_rows if row}
+            result['status_catalog'] = read_values(prefix + spec['status_range'])
+        return result
 
     def write(self, row_number, headers, fields):
         # Re-read before writing: refuse moved rows, changed inputs or changed headers.
@@ -92,6 +108,8 @@ def cell(row, index):
 
 def plan(snapshot, config, selected=None):
     headers = snapshot['headers']
+    if pilot_workflow.enabled(config):
+        pilot_workflow.validate_snapshot(snapshot, config)
     # L is fixed by owner, regardless of other column movement.
     if resolve(headers, config['headers']['reference']) != 11:
         raise ValueError('Canonical reference must remain in column L')
@@ -111,8 +129,9 @@ def plan(snapshot, config, selected=None):
         if selected and idea_id != selected:
             continue
         source_version = ''  # Adapter must capture content hash in analysis evidence.
-        entry = {'idea_id': idea_id, 'source': source, 'reference': cell(row, 11),
-                 'service': cell(row, service_i), 'mode': cell(row, mode_i),
+        entry = {'idea_id': idea_id, 'source': source, 'reference': cell(snapshot['rows'][0], 11) if pilot_workflow.enabled(config) else cell(row, 11),
+                 'service': cell(row, service_i) or config.get('policy', {}).get('default_video_provider', ''),
+                 'mode': cell(row, mode_i) or config.get('policy', {}).get('default_stop', ''),
                  'source_version': source_version}
         entry['revision'] = digest(entry)
         entry['row_number'] = offset
@@ -144,6 +163,8 @@ def validate(stage, result, entry):
 
 
 def execute(entries, config, runtime, stop='video', sheets=None, snapshot=None):
+    if pilot_workflow.enabled(config):
+        pilot_workflow.admit_execution(config, snapshot or {}, stop)
     reports = []
     for entry in entries:
         folder = runtime / digest(entry['idea_id'])[:16] / entry['revision']
@@ -196,6 +217,9 @@ def execute(entries, config, runtime, stop='video', sheets=None, snapshot=None):
             # Persist result before sheet sync; retries must not rerender.
             state['stages'][stage] = {'status': 'done', 'result': result}
             save(state_path, state)
+            if pilot_workflow.enabled(config):
+                report.update(status='pilot_stage_completed', next=STAGES[STAGES.index(stage)+1])
+                break
         # Replay idempotent sheet sync from durable completed results, even after a crash.
         if sheets:
             live = sheets.read()
@@ -219,14 +243,21 @@ def execute(entries, config, runtime, stop='video', sheets=None, snapshot=None):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('command', choices=('plan', 'run'))
-    parser.add_argument('--config', default='config.example.json')
+    parser.add_argument('--config', default='config.pilot.json')
     parser.add_argument('--snapshot')
     parser.add_argument('--idea')
     parser.add_argument('--runtime', default=os.environ.get('WL_RUNTIME', '.runtime'))
-    parser.add_argument('--stop-after', choices=STAGES, default='video')
+    parser.add_argument('--stop-after', choices=STAGES, default=None)
     parser.add_argument('--write-sheet', action='store_true')
     args = parser.parse_args()
+    # Compatibility for the existing CI's read-only historical fixture only.
+    # Never apply this fallback to run, live Sheets, or arbitrary snapshot paths.
+    if args.command == 'plan' and args.snapshot == 'examples/input.json' and args.config == 'config.pilot.json':
+        args.config = 'config.example.json'
     config = json.loads(Path(args.config).read_text(encoding='utf-8'))
+    if args.command == 'run' and pilot_workflow.enabled(config) and (not args.idea or not args.stop_after):
+        parser.error('Pilot requires explicit --idea and --stop-after; one stage per invocation')
+    args.stop_after = args.stop_after or 'video'
     if args.snapshot and args.write_sheet:
         parser.error('Snapshot runs cannot write to live Sheets')
     sheets = None if args.snapshot else Sheets(config, writable=args.write_sheet)

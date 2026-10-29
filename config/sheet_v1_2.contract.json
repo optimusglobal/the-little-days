@@ -1,0 +1,210 @@
+{
+  "schema_version": "tld-sheet-v1.2",
+  "spreadsheet_id": "1I09Na3kPwDtUsW6wlzYtbjwy9iNtZAcLOVDE4g6FJKM",
+  "tab": "01_SAN_XUAT",
+  "header_row": 4,
+  "headers": [
+    "Mã idea nội bộ",
+    "Link video gốc",
+    "Idea mới",
+    "Ý tưởng / Hook",
+    "Insight",
+    "Proposed Angle — US",
+    "Mã idea từ tool",
+    "Admin duyệt idea",
+    "Hook đã chọn",
+    "Kịch bản / Storyboard",
+    "Admin duyệt kịch bản",
+    "Ảnh tham chiếu",
+    "Frame 0",
+    "Prompt video canonical",
+    "Provider video",
+    "Bộ phiên bản hiện hành",
+    "Điểm dừng",
+    "Trạng thái sản xuất",
+    "Phản hồi từ tool ngoài",
+    "Mã video",
+    "Admin duyệt final",
+    "Title",
+    "Hashtag",
+    "Instagram",
+    "Facebook",
+    "YouTube",
+    "TikTok",
+    "Video raw",
+    "Video final",
+    "QC video tổng thể",
+    "Hồ sơ thực thi"
+  ],
+  "configuration_tab": "02_CAU_HINH",
+  "configuration_range": "A5:C63",
+  "status_range": "E5:G24",
+  "canonical_reference": {
+    "cell": "L5",
+    "drive_id": "1NHaUGJYqbZFsA6lQ2_9Y7QEAa7hUR1ly",
+    "sha256": "7cd0cf784351bc8c2b5cf345ced7ce2e65b1b30ee64cec6fc18b1aeb3572687f"
+  },
+  "configuration_snapshot": {
+    "schema_version": "tld-sheet-v1.2",
+    "deployment_state": "CHUA_KICH_HOAT",
+    "canonical_reference_cell": "01_SAN_XUAT!L5",
+    "canonical_reference_drive_id": "1NHaUGJYqbZFsA6lQ2_9Y7QEAa7hUR1ly",
+    "timezone": "Asia/Bangkok",
+    "default_stop": "Dừng trước render",
+    "default_video_provider": "Chưa chọn",
+    "gemini_content_route": "WEB_PILOT_API_OPTIONAL",
+    "gemini_model": "UNVERIFIED",
+    "frame0_route": "Chưa chốt",
+    "max_creative_revisions": 2,
+    "frame_aspect_ratio": "9:16",
+    "content_language": "US English",
+    "collaboration_language": "Tiếng Việt",
+    "admin_blocks_ai": false,
+    "publishing_enabled": false,
+    "render_enabled": false,
+    "github_repository": "optimusglobal/the-little-days",
+    "github_branch": "feature/p0-render-safety-prompt-integrity",
+    "execution_host": "Mia",
+    "state_store": "UNVERIFIED_PRIVATE_MANIFEST",
+    "scheduler": "Chưa nối Sheet mới",
+    "legacy_spreadsheet_id": "1MfErcyvRQSWS7kABIyq3_ljzI1keZ4HRl1Ngh3n-Cag",
+    "migration_state": "Chưa chuyển IDEA_001/002",
+    "operating_mode": "STAGE1_STANDALONE_GROWTH",
+    "render_execution_mode": "PREPARE_ONLY",
+    "max_render_submissions_per_segment": 1,
+    "max_render_submissions_per_day": 2,
+    "budget_scope": "IDEA_SEGMENT_AND_LOCAL_DAY",
+    "render_policy_precedence": "OWNER_STOP > DEPLOYMENT > RENDER_ENABLED > ROW_STOP > PREREQUISITES > BUDGET",
+    "submission_uncertain_policy": "RECONCILE_ONLY",
+    "qc_quota_policy": "KEEP_ASSET_QC_PENDING",
+    "human_qc_policy": "ACTUAL_REVIEW_WITH_EVIDENCE",
+    "qc_layers": "TECHNICAL_VISUAL_AUDIO_EDITORIAL",
+    "local_media_tools": "FFPROBE_FFMPEG_PROPOSED",
+    "target_frame_size": "PROVIDER_PROFILE_REQUIRED",
+    "media_tolerances": "PROVIDER_PROFILE_REQUIRED",
+    "prompt_contract": "STRUCTURED_DIALOGUE_TIMELINE_SCENE_PROPS",
+    "continuous_shot_policy": "FOLLOW_SCRIPT_NO_UNPLANNED_CUTS",
+    "segment_chain_policy": "QC_PREVIOUS_CLIP_AND_LAST_DECODED_FRAME",
+    "state_persistence_policy": "ATOMIC_JSON_WITH_LOCK_HISTORY_BACKUP",
+    "executor_policy": "GITHUB_DISPATCH_SINGLE_MIA_EXECUTOR",
+    "canonical_reference_sha256": "7cd0cf784351bc8c2b5cf345ced7ce2e65b1b30ee64cec6fc18b1aeb3572687f",
+    "asset_folder_policy": "IDENTITY_SOURCE_FRAME0_RAW_FINAL",
+    "review_application_state": "SHEET_REFINED_RUNTIME_NOT_DEPLOYED",
+    "review_source": "https://chatgpt.com/library?file_id=libfile_07a1822f42648191a22b8898d8d75dec&account_id=personal",
+    "validation_end_row": 1000,
+    "pilot_execution_policy": "STEP_BY_STEP",
+    "pilot_render_authorization": "EXPLICIT_VERSION_BOUND",
+    "authorization_store": "PRIVATE_MANIFEST",
+    "gemini_web_status": "UNVERIFIED",
+    "gemini_api_status": "OPTIONAL_QUOTA_UNVERIFIED",
+    "gemini_task_input": "VERSIONED_TASK_PACKET",
+    "production_validation_end_row": 1000,
+    "log_validation_end_row": 10000,
+    "legacy_import_policy": "VERIFY_AND_BACKFILL",
+    "legacy_import_command": "NOT_VERIFIED",
+    "status_catalog_range": "02_CAU_HINH!E5:G24",
+    "quota_strategy": "PREFLIGHT_CACHE_REUSE_BOUNDED_CALLS"
+  },
+  "status_catalog": [
+    [
+      "Mới nạp",
+      "NEW",
+      "Input mới; chưa phân tích."
+    ],
+    [
+      "Phân tích",
+      "SOURCE_ANALYSIS",
+      "Đang đọc nguồn thật."
+    ],
+    [
+      "Chốt idea",
+      "IDEA_REVIEW",
+      "Gemini đang chốt idea."
+    ],
+    [
+      "Từ chối idea",
+      "IDEA_REJECTED",
+      "Gemini từ chối; không triển khai tiếp."
+    ],
+    [
+      "Thiếu bằng chứng",
+      "INSUFFICIENT_EVIDENCE",
+      "Thiếu nguồn hoặc bằng chứng review."
+    ],
+    [
+      "Viết script",
+      "SCRIPT",
+      "Đang viết/review kịch bản."
+    ],
+    [
+      "Tạo Frame 0",
+      "FRAME0",
+      "Đang tạo/review ảnh mở đầu."
+    ],
+    [
+      "Tạo prompt",
+      "PROMPT",
+      "Đang chuẩn bị/review prompt."
+    ],
+    [
+      "Sẵn sàng render",
+      "READY_RENDER",
+      "Gói đủ prerequisite; chưa có nghĩa được submit."
+    ],
+    [
+      "Đang render",
+      "RENDERING",
+      "Có submission/job thật đang xử lý."
+    ],
+    [
+      "Chờ QC",
+      "QC_PENDING",
+      "Đã có tài sản; còn QC yêu cầu."
+    ],
+    [
+      "Chờ QC API",
+      "QC_API_PENDING",
+      "QC bị hoãn bởi API; không render lại."
+    ],
+    [
+      "Đối soát job",
+      "RECONCILE_REQUIRED",
+      "Kết quả job chưa rõ; chỉ đối soát."
+    ],
+    [
+      "Đang QC",
+      "QC_RUNNING",
+      "Đang kiểm định output."
+    ],
+    [
+      "Cần sửa",
+      "NEEDS_REVISION",
+      "Có lỗi cụ thể cần sửa."
+    ],
+    [
+      "Chạm trần",
+      "BUDGET_EXHAUSTED",
+      "Hết ngân sách; không tự reset."
+    ],
+    [
+      "Bị chặn",
+      "BLOCKED",
+      "Blocker kỹ thuật/quyền/nguồn cụ thể."
+    ],
+    [
+      "Tạm dừng",
+      "PAUSED",
+      "Chủ động tạm dừng."
+    ],
+    [
+      "Đã bàn giao",
+      "DELIVERED",
+      "Output đúng phạm vi và QC yêu cầu đủ."
+    ],
+    [
+      "Đã đóng",
+      "CLOSED",
+      "Chủ dự án đóng hồ sơ."
+    ]
+  ]
+}

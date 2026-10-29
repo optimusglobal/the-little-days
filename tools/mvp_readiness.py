@@ -30,8 +30,8 @@ def report(config, snapshot):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--config", default="config.example.json")
-    ap.add_argument("--snapshot", default="examples/input.json")
+    ap.add_argument("--config", default="config.pilot.json")
+    ap.add_argument("--snapshot", default="examples/pilot.input.json")
     args = ap.parse_args()
     config = json.loads(Path(args.config).read_text(encoding="utf-8"))
     snapshot = json.loads(Path(args.snapshot).read_text(encoding="utf-8"))

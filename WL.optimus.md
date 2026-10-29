@@ -1,3 +1,9 @@
+# Hướng dẫn hiện hành — 29/10/2026
+
+Nguồn chuẩn mới: [Sheet v1.2 và pilot từng bước](docs/SHEET_V1_2_PILOT_WORKFLOW.md). Mặc định dùng `config.pilot.json`, Sheet `1I09Na3kPwDtUsW6wlzYtbjwy9iNtZAcLOVDE4g6FJKM`. Chưa kích hoạt worker/render/lịch hoặc migration. Các mục dưới là lịch sử; mô tả cột, ảnh theo hàng, default config và readiness mâu thuẫn được thay bằng tài liệu v1.2. Cơ chế signed approval/security hiện có không bị nới hoặc thay thế.
+
+---
+
 # WL.optimus — The Little Days
 
 > **Yêu cầu kiến trúc đã khóa:** Đọc và tuân thủ [ARCHITECTURE_LOCK.md](ARCHITECTURE_LOCK.md) trước khi thực thi. GitHub quản lý code và điều khiển lượt chạy; ChatGPT điều phối chính; Gemini hỗ trợ thực hiện và giữ quyền duyệt idea cuối. Máy cá nhân chỉ là nơi thực thi khi cần. Đây là yêu cầu kiến trúc đã chốt, không phải xác nhận đã triển khai đầy đủ. Các phần workflow còn nháp không tự được khóa theo.

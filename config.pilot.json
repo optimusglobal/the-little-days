@@ -1,0 +1,33 @@
+{
+  "schema_version": "tld-sheet-v1.2",
+  "spreadsheet_id": "1I09Na3kPwDtUsW6wlzYtbjwy9iNtZAcLOVDE4g6FJKM",
+  "tab": "01_SAN_XUAT",
+  "header_row": 4,
+  "last_column": "AE",
+  "end_row": 1000,
+  "contract_file": "config/sheet_v1_2.contract.json",
+  "headers": {
+    "idea": "Idea mới",
+    "hook": "Ý tưởng / Hook",
+    "insight": "Insight",
+    "angle": "Proposed Angle — US",
+    "script": "Kịch bản / Storyboard",
+    "frame": "Frame 0",
+    "prompt": "Prompt video canonical",
+    "reference": "Ảnh tham chiếu",
+    "service": "Provider video",
+    "mode": "Điểm dừng",
+    "version": "Bộ phiên bản hiện hành",
+    "production_status": "Trạng thái sản xuất"
+  },
+  "policy": {
+    "deployment_state": "CHUA_KICH_HOAT",
+    "render_enabled": false,
+    "step_by_step": true,
+    "default_stop": "Dừng trước render",
+    "default_video_provider": "Chưa chọn",
+    "max_render_submissions_per_segment": 1,
+    "max_render_submissions_per_day": 2
+  },
+  "workers": {}
+}

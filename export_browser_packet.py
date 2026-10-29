@@ -13,6 +13,7 @@ from character_dialogue_guard import validate_character_dialogue
 from source_dialogue_guard import verify_source_dialogue
 from approval_guard import verify_approval
 import hashlib
+import pilot_workflow
 
 def select_segment_prompt(timeline, segment_id, master_prompt):
     if timeline.get('master_prompt_sha256') != hashlib.sha256(master_prompt.encode('utf-8')).hexdigest():
@@ -57,9 +58,10 @@ def download_image(session, url, path):
 
 
 
-def verify_packet_live(packet, config_path='config.example.json'):
+def verify_packet_live(packet, config_path='config.pilot.json'):
     """Fail closed on stale, altered, or unverifiable live Sheet data."""
     config = json.loads(Path(config_path).read_text(encoding='utf-8'))
+    pilot_workflow.block_uncommissioned_render(config)
     live = Sheets(config).read()
     entry = plan(live, config, packet['idea_id'])[0]
     row = live['rows'][entry['row_number'] - config['header_row'] - 1]
@@ -87,13 +89,14 @@ def verify_packet_live(packet, config_path='config.example.json'):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--idea', required=True)
-    ap.add_argument('--config', default='config.example.json')
+    ap.add_argument('--config', default='config.pilot.json')
     ap.add_argument('--model', default='Argon')
     ap.add_argument('--timeline', required=True, help='Preapproved timeline JSON; never auto-author creative content')
     ap.add_argument('--segment', required=True, help='Explicit approved segment ID')
     ap.add_argument('--output', default='.runtime/packets')
     args = ap.parse_args()
     config = json.loads(Path(args.config).read_text(encoding='utf-8'))
+    pilot_workflow.block_uncommissioned_render(config)
     timeline = json.loads(Path(args.timeline).read_text(encoding='utf-8'))
     verify_approval(timeline, args.idea)
     sheet = Sheets(config)

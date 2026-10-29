@@ -1,3 +1,9 @@
+# Hướng dẫn hiện hành — 29/10/2026
+
+Nguồn chuẩn mới: [Sheet v1.2 và pilot từng bước](docs/SHEET_V1_2_PILOT_WORKFLOW.md). Mặc định dùng `config.pilot.json`, Sheet `1I09Na3kPwDtUsW6wlzYtbjwy9iNtZAcLOVDE4g6FJKM`. Chưa kích hoạt worker/render/lịch hoặc migration. Các mục dưới là lịch sử; mô tả cột, ảnh theo hàng, default config và readiness mâu thuẫn được thay bằng tài liệu v1.2. Cơ chế signed approval/security hiện có không bị nới hoặc thay thế.
+
+---
+
 # Bộ chạy The Little Days — bản nền v0.1
 
 Đã có: bộ điều phối Python, đọc Sheets thật qua Google API, ánh xạ cột theo header, packet cho sáu bước, lưu checkpoint, chống chạy trùng và ghi chính xác các cột nội dung. Chưa có: worker AI, kết nối tạo ảnh, Gemini/Grok video hoặc Commander đã hoạt động. Bản này không tự tạo video ngay sau khi clone.

@@ -1,26 +1,30 @@
 # The Little Days
 
-Workflow hoạt hình gia đình 3D hướng tới khán giả Mỹ. Bản nháp đang hoàn thiện.
+Workflow hiện hành: [Sheet v1.2 và pilot từng bước](docs/SHEET_V1_2_PILOT_WORKFLOW.md).
+Sheet: https://docs.google.com/spreadsheets/d/1I09Na3kPwDtUsW6wlzYtbjwy9iNtZAcLOVDE4g6FJKM/edit
 
-- [Workflow chuẩn](WL.optimus.md)
-- [Thiết lập đọc Sheets / bộ điều phối](RUNNER_SETUP.md)
-- [Chạy video Gemini trên Chrome máy bạn](BROWSER_SETUP.md)
+GPT điều phối; GitHub quản lý code/lượt chạy; Mia thực thi; Gemini hỗ trợ sáng tạo và review thật.
 
-## Trạng thái đã xác minh
+## Trạng thái
 
-GitHub Actions đọc được sheet thật (1 hàng hợp lệ). Commander kết nối máy Mia. Playwright extension đọc được tab Gemini và tải được video MP4. Kết quả hiện có: 720×1280, khoảng 10 giây; chưa QA sáng tạo/phụ đề.
+- Schema v1.2: 4 tab, production A–AE, L5 canonical, config/status catalog và nhật ký A–X.
+- Mặc định runner dùng config.pilot.json. Deployment CHUA_KICH_HOAT, render disabled, workers rỗng.
+- Plan hỗ trợ Sheet mới; run bị chặn trước worker/write khi chưa activated.
+- Chưa di chuyển IDEA_001/002, chưa chạy AI/browser/render hoặc bật lịch trên Sheet mới.
+- Gemini Web là ứng viên pilot, API tùy chọn; adapter Web gửi/nhận/lưu phản hồi chưa được nghiệm thu.
+- Render/export v1.2 chưa commissioned và bị chặn; signed-approval guards hiện có giữ nguyên.
+- Các tài liệu/checkpoint cũ là lịch sử, không phải bằng chứng runtime hiện tại.
 
-## Chạy thử không dùng credit
+## Kiểm tra offline
 
 ```bash
 python -m unittest discover -s tests -v
-python runner.py plan --snapshot examples/input.json
+python runner.py plan --config config.pilot.json --snapshot examples/pilot.input.json
 ```
 
-## Chạy trên Chrome local
+Action Little Days - plan input dùng config mới, chỉ đọc; chưa dispatch live trong lần cập nhật này.
+config.example.json/config.mvp.example.json/examples/input.json chỉ giữ cho tests và compatibility lịch sử.
+Không dùng legacy config để bỏ qua stop của chủ dự án.
 
-Đọc BROWSER_SETUP.md, khởi động `start-browser.cmd` rồi cấu hình quyền Sheets/Drive trên máy. `run_browser.py` dùng hàng đã có Frame 0 và prompt; hỗ trợ prepare-only, submit một lần, khôi phục conversation và tải raw.
-
-**Chưa hoàn tất tự động sáu bước:** worker phân tích video, viết idea/script, tạo Frame 0 và review Gemini chưa được kết nối trong runner. Grok chưa có adapter đã kiểm chứng. Cài extension hoặc lưu code không đồng nghĩa job render mới đã chạy xuyên suốt. Không có lịch render/self-hosted runner mới được bật.
-
-Không commit credential, cookie, token, runtime hay video riêng tư. Không có bước đăng công khai tự động.
+Tiếp theo chỉ thực hiện một stage khi chủ dự án yêu cầu; lưu output thật/evidence rồi dừng.
+Không sửa main, không merge PR #1, không tạo production keys, không tự render/đăng bài.

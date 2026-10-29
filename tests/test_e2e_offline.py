@@ -85,7 +85,7 @@ class EndToEndOfflineTests(unittest.TestCase):
             # Mock only file config lookup, preserving all actual verifier gates.
             real_read=Path.read_text
             def read(path,*a,**kw):
-                if str(path)=='config.example.json':return json.dumps(CONFIG)
+                if str(path) in ('config.example.json','config.pilot.json'):return json.dumps(CONFIG)
                 return real_read(path,*a,**kw)
             with patch('export_browser_packet.Path.read_text',read):
                 try:
