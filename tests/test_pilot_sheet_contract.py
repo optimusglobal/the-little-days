@@ -14,7 +14,7 @@ class PilotSheetTests(unittest.TestCase):
         self.c = json.loads(Path('config.pilot.json').read_text(encoding='utf-8'))
         self.s = json.loads(Path('examples/pilot.input.json').read_text(encoding='utf-8'))
     def add_idea(self, ident='IDEA_TEST'):
-        row=['']*31
+        row=['']*32
         row[0:2]=[ident,'https://example.invalid/source.mp4']
         self.s['rows'].append(row)
     def test_empty_sheet_only_reference_has_zero_jobs(self):
@@ -63,7 +63,7 @@ class PilotSheetTests(unittest.TestCase):
             folder=Path(td)/runner.digest(e[0]['idea_id'])[:16]/e[0]['revision']
             runner.save(folder/'analysis.result.json',{'observations':'fixture',
                         'source_evidence':{'fixture':True},'limitations':'offline fixture'})
-            reports=runner.execute(e,self.c,Path(td),stop='prompt',snapshot=self.s)
+            reports=runner.execute(e,self.c,Path(td),stop='idea',snapshot=self.s)
             self.assertEqual(reports[0]['status'],'pilot_stage_completed')
             self.assertEqual(reports[0]['next'],'idea')
             self.assertFalse((folder/'idea.request.json').exists())

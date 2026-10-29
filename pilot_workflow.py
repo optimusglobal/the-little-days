@@ -1,10 +1,10 @@
-"""Sheet v1.2 contract and pilot admission. No AI/browser calls or credentials."""
+"""Sheet v1.3 contract and pilot admission. No AI/browser calls or credentials."""
 import json
 from pathlib import Path
 from urllib.parse import urlsplit
 import re
 
-SCHEMA = 'tld-sheet-v1.2'
+SCHEMA = 'tld-sheet-v1.3'
 
 def enabled(config):
     return config.get('schema_version') == SCHEMA
@@ -18,7 +18,7 @@ def contract(config):
 def validate_snapshot(snapshot, config):
     spec = contract(config)
     if snapshot['headers'] != spec['headers']:
-        raise ValueError('Sheet v1.2 header schema mismatch')
+        raise ValueError('Sheet v1.3 header schema mismatch')
     settings = snapshot.get('settings')
     if not isinstance(settings, dict) or settings.get('schema_version') != SCHEMA:
         raise ValueError('Sheet configuration snapshot required')
@@ -45,10 +45,12 @@ def admit_execution(config, snapshot, stop):
         raise ValueError('Pilot deployment not activated; plan only')
     if stop == 'video' or settings.get('render_enabled') is not False:
         raise ValueError('Pilot render adapter not commissioned; render remains disabled')
+    if settings.get('current_pilot_scope') == 'IDEA_ONLY' and stop not in ('analysis', 'idea'):
+        raise ValueError('Pilot currently stops at idea review')
     if not config['policy'].get('step_by_step'):
         raise ValueError('Pilot must execute one incomplete stage per invocation')
     return True
 
 def block_uncommissioned_render(config):
     if enabled(config):
-        raise ValueError('Sheet v1.2 render/export adapter not commissioned; no browser side effects')
+        raise ValueError('Sheet v1.3 render/export adapter not commissioned; no browser side effects')

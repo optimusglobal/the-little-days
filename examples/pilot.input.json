@@ -2,8 +2,8 @@
   "headers": [
     "Mã idea nội bộ",
     "Link video gốc",
-    "Idea mới",
-    "Ý tưởng / Hook",
+    "Idea GPT",
+    "Idea Gemini",
     "Insight",
     "Proposed Angle — US",
     "Mã idea từ tool",
@@ -30,7 +30,8 @@
     "Video raw",
     "Video final",
     "QC video tổng thể",
-    "Hồ sơ thực thi"
+    "Hồ sơ thực thi",
+    "Ý tưởng / Hook"
   ],
   "rows": [
     [
@@ -64,11 +65,12 @@
       "",
       "",
       "",
+      "",
       ""
     ]
   ],
   "settings": {
-    "schema_version": "tld-sheet-v1.2",
+    "schema_version": "tld-sheet-v1.3",
     "deployment_state": "CHUA_KICH_HOAT",
     "canonical_reference_cell": "01_SAN_XUAT!L5",
     "canonical_reference_drive_id": "1NHaUGJYqbZFsA6lQ2_9Y7QEAa7hUR1ly",
@@ -126,7 +128,12 @@
     "legacy_import_policy": "VERIFY_AND_BACKFILL",
     "legacy_import_command": "NOT_VERIFIED",
     "status_catalog_range": "02_CAU_HINH!E5:G24",
-    "quota_strategy": "PREFLIGHT_CACHE_REUSE_BOUNDED_CALLS"
+    "quota_strategy": "PREFLIGHT_CACHE_REUSE_BOUNDED_CALLS",
+    "gpt_idea_column": "C",
+    "gemini_idea_column": "D",
+    "idea_stage_policy": "GPT_DRAFT_THEN_GEMINI_REWRITE",
+    "dialogue_priority": "VISUAL_STORYTELLING_LOW_DIALOGUE",
+    "current_pilot_scope": "IDEA_ONLY"
   },
   "status_catalog": [
     [

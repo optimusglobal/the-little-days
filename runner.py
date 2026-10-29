@@ -133,6 +133,9 @@ def plan(snapshot, config, selected=None):
                  'service': cell(row, service_i) or config.get('policy', {}).get('default_video_provider', ''),
                  'mode': cell(row, mode_i) or config.get('policy', {}).get('default_stop', ''),
                  'source_version': source_version}
+        if pilot_workflow.enabled(config):
+            entry['gpt_idea'] = cell(row, resolve(headers, config['headers']['gpt_idea']))
+            entry['idea_review_policy'] = 'GPT_DRAFT_THEN_GEMINI_REWRITE'
         entry['revision'] = digest(entry)
         entry['row_number'] = offset
         entry['existing'] = {field: cell(row, resolve(headers, config['headers'][field]))
@@ -146,6 +149,10 @@ def plan(snapshot, config, selected=None):
 def validate(stage, result, entry):
     if not isinstance(result, dict) or any(not result.get(k) for k in REQUIRED[stage]):
         raise ValueError('Worker result missing required evidence/output fields')
+    if stage == 'idea' and entry.get('idea_review_policy'):
+        review = result.get('review', {})
+        if review.get('provider') != 'Gemini' or review.get('verdict') not in ('use', 'revise', 'ready') or not review.get('evidence') or not (review.get('response_id') or review.get('conversation_url')):
+            raise ValueError('Actual Gemini idea rewrite review required')
     if stage == 'script':
         review = result['review']
         if not isinstance(review, dict) or review.get('provider') != 'Gemini' or review.get('verdict') != 'ready' or not review.get('evidence'):

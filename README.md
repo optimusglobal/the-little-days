@@ -1,3 +1,9 @@
+# Cập nhật ưu tiên v1.3 — Idea GPT / Idea Gemini
+
+Đọc [Idea pilot v1.3](docs/SHEET_V1_3_IDEA_PILOT.md). C=Idea GPT, D=Idea Gemini, AF=Hook, L5 giữ nguyên. D chỉ nhận bản viết lại thật của Gemini; chưa chạy stage sau idea.
+
+---
+
 # The Little Days
 
 Workflow hiện hành: [Sheet v1.2 và pilot từng bước](docs/SHEET_V1_2_PILOT_WORKFLOW.md).
