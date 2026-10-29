@@ -1,0 +1,16 @@
+name: Google native pilot
+on:
+  push:
+    paths: ['workflow_v2/**', '.github/workflows/google-native-pilot.yml']
+  pull_request:
+    paths: ['workflow_v2/**', '.github/workflows/google-native-pilot.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  google-native-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: node --check workflow_v2/google_apps_script/Code.js
+      - run: node --test workflow_v2/tests/google_native.test.cjs
