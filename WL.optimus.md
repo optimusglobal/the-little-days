@@ -274,3 +274,10 @@ Chủ dự án đã chọn tự động hóa lâu dài bằng Gemini API và xá
 - Trạng thái cấu hình: Python trên Mia chưa tìm thấy API key khả dụng. Cần cấu hình GEMINI_API_KEY cục bộ, xác minh model hỗ trợ video/JSON và quota trước khi gọi review thật. Không suy ra key hợp lệ từ kiểm tra biến môi trường đơn thuần.
 - Bản này chưa tự nối vào runner hoặc lịch hằng ngày, chưa tự ghi Sheets và chưa thay thế công cụ tạo video. Không coi việc đặt code là hệ thống tự động hoàn tất. IDEA_002 giữ pending ở bước xác minh audio và Gemini kiểm duyệt.
 - Không lưu API key trong GitHub, Sheets, chat hoặc packet. Lưu phản hồi gốc, model, response ID khi có, hash đầu vào và bản chốt ở hồ sơ local riêng tư. Không tự retry khi yêu cầu trước chưa được đối soát.
+
+
+## 16. Proposed integration — AI Creative Director & Quality Gate (31/10/2026)
+
+The owner requested adding independent creative critique and a comparative Quality Gate. See [CREATIVE_DIRECTOR_QUALITY_GATE.md](CREATIVE_DIRECTOR_QUALITY_GATE.md) for the proposed stage contract, scorecard, evidence requirements, caching, failure states and approval boundary.
+
+This newer candidate-selection instruction replaces the prior assumption that the Gemini rewrite must automatically be the final choice: keep the original GPT idea and real Gemini critique/rewrite separately, compare both consistently, and allow neither to pass. Gemini must still participate genuinely. This section is a proposed workflow amendment under review; it is **not deployed**, does not update Sheets, and does not activate production, render or publishing. All architecture locks and completed checkpoints remain unchanged.
