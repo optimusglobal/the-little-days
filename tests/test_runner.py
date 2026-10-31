@@ -9,6 +9,11 @@ class RunnerTests(unittest.TestCase):
     def setUp(self):
         self.config = json.loads(Path('config.example.json').read_text(encoding='utf-8'))
         self.snapshot = json.loads(Path('examples/input.json').read_text(encoding='utf-8'))
+        # Historical fixture has legacy headers; match by column position, not production config.
+        for field, old in list(self.config['headers'].items()):
+            if field in ('hook','insight','angle'):
+                index={'hook':3,'insight':4,'angle':5}[field]
+                self.config['headers'][field]=self.snapshot['headers'][index]
 
     def test_unchecked_admin_is_not_a_gate(self):
         self.assertEqual(len(runner.plan(self.snapshot, self.config)), 1)

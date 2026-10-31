@@ -14,7 +14,7 @@ with tempfile.TemporaryDirectory() as temp:
     path.write_text(json.dumps(json.loads(secret)), encoding='utf-8')
     path.chmod(0o600)
     env = dict(os.environ, GOOGLE_APPLICATION_CREDENTIALS=str(path))
-    command = [sys.executable, 'runner.py', 'plan']
+    command = [sys.executable, 'runner.py', 'plan', '--config', 'config.pilot.json']
     if os.environ.get('IDEA_ID'):
         command += ['--idea', os.environ['IDEA_ID']]
     sys.exit(subprocess.run(command, env=env, shell=False).returncode)

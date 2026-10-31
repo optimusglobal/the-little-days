@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "idea_id": "IDEA_APPROVAL_TEST",
+  "description": "Synthetic test fixture. Never authorize production or video rendering.",
+  "segments": [
+    {
+      "segment_id": "01",
+      "start": 0,
+      "end": 8,
+      "prompt": "8 seconds. Test Actor: \"Hello.\"",
+      "dialogue": [{"speaker": "Test Actor", "text": "Hello."}]
+    }
+  ],
+  "total_duration": 8
+}

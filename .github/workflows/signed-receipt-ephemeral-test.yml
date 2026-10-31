@@ -1,0 +1,77 @@
+name: Signed Receipt Integration — Ephemeral Key Safe Test
+on:
+  push:
+    branches:
+      - feature/p0-render-safety-prompt-integrity
+    paths:
+      - '.github/workflows/signed-receipt-ephemeral-test.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    outputs:
+      digest: ${{ steps.digest.outputs.digest }}
+      source_commit: ${{ steps.digest.outputs.commit }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - id: digest
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib, json, os
+          timeline=json.loads(Path('examples/approval-demo-timeline.json').read_text(encoding='utf-8'))
+          assert timeline['idea_id']=='IDEA_APPROVAL_TEST'
+          digest=hashlib.sha256(json.dumps(timeline,sort_keys=True,ensure_ascii=False,separators=(',',':')).encode()).hexdigest()
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f:
+              f.write(f'digest={digest}\ncommit={os.environ["GITHUB_SHA"]}\n')
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f:
+              f.write(f'## TEST ONLY — Not a render approval\nIdea: `IDEA_APPROVAL_TEST`\nCommit: `{os.environ["GITHUB_SHA"]}`\nDigest: `{digest}`\n')
+          PY
+  human_approved_ephemeral_sign:
+    needs: preflight
+    runs-on: ubuntu-latest
+    environment: human-approval
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.preflight.outputs.source_commit }}
+          persist-credentials: false
+      - name: Install isolated signing dependency
+        run: python -m pip install 'cryptography>=43,<49'
+      - name: Sign and verify with an ephemeral test key, never deploy
+        env:
+          EXPECTED_DIGEST: ${{ needs.preflight.outputs.digest }}
+          EXPECTED_COMMIT: ${{ needs.preflight.outputs.source_commit }}
+        run: |
+          python - <<'PY'
+          import base64, hashlib, json, os
+          from pathlib import Path
+          from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+          assert os.environ['EXPECTED_COMMIT']==os.environ['GITHUB_SHA'], 'Commit changed'
+          timeline=json.loads(Path('examples/approval-demo-timeline.json').read_text(encoding='utf8'))
+          assert timeline['idea_id']=='IDEA_APPROVAL_TEST', 'Wrong idea'
+          canonical=lambda obj: json.dumps(obj,sort_keys=True,ensure_ascii=False,separators=(',',':')).encode()
+          digest=hashlib.sha256(canonical(timeline)).hexdigest()
+          assert digest==os.environ['EXPECTED_DIGEST'], 'Timeline digest changed'
+          record={'schema_version':2,'decision':'approved','idea_id':'IDEA_APPROVAL_TEST','timeline_sha256':digest,'approved_by':'GITHUB_TEST_ONLY_NOT_VERIFIED_IDENTITY','key_id':'ephemeral-test-only'}
+          private=Ed25519PrivateKey.generate()
+          signature=private.sign(canonical(record))
+          private.public_key().verify(signature,canonical(record))
+          record['signature']=base64.b64encode(signature).decode()
+          tampered=dict(record, timeline_sha256='0'*64)
+          try:
+              private.public_key().verify(base64.b64decode(record['signature']),canonical({k:v for k,v in tampered.items() if k!='signature'}))
+          except Exception: pass
+          else: raise AssertionError('Tampered receipt verified!')
+          print('EPHEMERAL_SIGNED_RECEIPT_TEST_PASS')
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a') as f:
+              f.write('## Ephemeral signing verified — TEST ONLY\n')
+              f.write(f'- Commit: `{os.environ["GITHUB_SHA"]}`\n- SHA-256: `{digest}`\n')
+              f.write('- No production key. No receipt exported. No Mia access. No render.\n')
+          PY

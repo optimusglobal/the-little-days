@@ -1,3 +1,9 @@
+# Hướng dẫn hiện hành — 29/10/2026
+
+Nguồn chuẩn mới: [Sheet v1.2 và pilot từng bước](docs/SHEET_V1_2_PILOT_WORKFLOW.md). Mặc định dùng `config.pilot.json`, Sheet `1I09Na3kPwDtUsW6wlzYtbjwy9iNtZAcLOVDE4g6FJKM`. Chưa kích hoạt worker/render/lịch hoặc migration. Các mục dưới là lịch sử; mô tả cột, ảnh theo hàng, default config và readiness mâu thuẫn được thay bằng tài liệu v1.2. Cơ chế signed approval/security hiện có không bị nới hoặc thay thế.
+
+---
+
 # Gemini API idea review
 
 Status: a live Gemini Flash review and a subsequent tool-field rewrite have succeeded. Browser and extension are not required for this review client. This does not automate rendering or configure scheduled runs.

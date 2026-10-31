@@ -7,6 +7,10 @@ import subprocess
 import sys
 import time
 from browser_video import Blocked, Job, MCP, lock
+from production_guard import GuardError, check_timeline, reserve_submission, check_production_status
+from export_browser_packet import verify_packet_live
+from timeline_guard import validate_timeline
+from approval_guard import verify_approval
 
 
 def main():
@@ -14,24 +18,54 @@ def main():
     ap.add_argument('--idea', required=True)
     ap.add_argument('--packet', help='Use an already exported, verified packet')
     ap.add_argument('--model', default='Argon')
+    ap.add_argument('--timeline', help='Approved timeline JSON required for exporting a new packet')
+    ap.add_argument('--segment', help='Approved timeline segment ID')
     ap.add_argument('--conversation', help='Explicitly recover an existing Gemini result, never submit again')
     ap.add_argument('--prepare-only', action='store_true')
+    ap.add_argument('--send-confirmed', action='store_true')
+    ap.add_argument('--revision-approved', action='store_true')
     ap.add_argument('--runtime', default=os.environ.get('WL_BROWSER_RUNTIME','.runtime/browser'))
     ap.add_argument('--output', default=str(Path.home()/'Videos'/'TheLittleDays'))
     args=ap.parse_args()
     if args.packet:
         packet_path=Path(args.packet)
     else:
-        process=subprocess.run([sys.executable,'export_browser_packet.py','--idea',args.idea,'--model',args.model],
+        if not args.timeline or not args.segment:
+            raise Blocked('Approved --timeline and --segment are required for export')
+        process=subprocess.run([sys.executable,'export_browser_packet.py','--idea',args.idea,'--model',args.model,
+                                '--timeline',args.timeline,'--segment',args.segment],
                                capture_output=True,text=True,encoding='utf-8')
         if process.returncode:
             raise Blocked('Sheet/Drive export failed; check local Google credentials and sharing')
         packet_path=Path(json.loads(process.stdout)['packet'])
     packet=json.loads(packet_path.read_text(encoding='utf-8'))
+    if not packet.get('segment_id') or not isinstance(packet['segment_id'], str):
+        raise Blocked('Packet must contain a stable segment_id')
     if packet['idea_id'] != args.idea:
         raise Blocked('Packet idea ID differs from requested idea')
+    # Fail closed before constructing MCP/Job or performing any browser side effects.
+    if not args.conversation:
+        try:
+            verify_packet_live(packet)
+            verify_approval(packet.get('timeline'), args.idea)
+            check_production_status(packet.get('production_status',''))
+            validate_timeline(packet)
+        except (GuardError, Blocked) as exc:
+            raise Blocked(str(exc))
+    if args.conversation:
+        if not args.packet:
+            raise Blocked('Recovery requires an existing --packet; never export during recovery')
+        if args.send_confirmed or args.revision_approved:
+            raise Blocked('Recovery cannot accept render or revision authorization flags')
+        from urllib.parse import urlsplit
+        import re
+        url=urlsplit(args.conversation)
+        if url.scheme!='https' or url.hostname!='gemini.google.com' or not re.fullmatch(r'/app/[A-Za-z0-9]+',url.path):
+            raise Blocked('Recovery requires an exact Gemini conversation URL')
     job=Job(packet,args.runtime,MCP())
     with lock(job.folder):
+        if args.conversation and job.state.get('status') not in ('pending','submitted','submission_uncertain','video_available'):
+            raise Blocked('Recovery requires an existing submitted job, not a fresh or prepared job')
         if job.state['status']=='downloaded':
             job.download(Path.home()/'Downloads',args.output)
         elif args.conversation:
@@ -42,6 +76,18 @@ def main():
             print(json.dumps({'status':job.state['status'],'record':str(job.path)}))
             return
         if job.state['status']=='prepared':
+            if args.conversation:
+                raise Blocked('Recovery must never submit a prepared job')
+            if not args.send_confirmed:
+                raise Blocked('Prepared only; --send-confirmed required for render')
+            try:
+                verify_packet_live(packet)
+                verify_approval(packet.get('timeline'), args.idea)
+                check_production_status(packet.get('production_status',''))
+                validate_timeline(packet)
+                reserve_submission(Path(args.runtime), args.idea, packet['segment_id'], job.key, True, args.revision_approved)
+            except (GuardError, Blocked) as exc:
+                raise Blocked(str(exc))
             job.submit()
         if job.state['status']=='submission_uncertain':
             raise Blocked('Submission uncertain; recover exact conversation rather than sending again')

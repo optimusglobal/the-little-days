@@ -335,6 +335,8 @@ def main():
             job.adopt(args.conversation)
         elif args.action == 'download':
             job.download(args.downloads, args.output)
+        elif args.action == 'submit':
+            raise Blocked('Direct submission disabled; use run_browser.py --send-confirmed with P0 guards')
         else:
             getattr(job, args.action)()
     print(json.dumps({'idea_id': packet['idea_id'], 'status': job.state['status'],
