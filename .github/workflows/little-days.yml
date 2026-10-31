@@ -1,4 +1,4 @@
-name: Little Days - plan input
+name: Little Days v1.3 - plan input (read only)
 on:
   workflow_dispatch:
     inputs:
@@ -20,6 +20,18 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install -r requirements.txt
+      - name: Assert canonical v1.3 target
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          c=json.loads(Path('config.example.json').read_text(encoding='utf-8'))
+          assert c['schema_version']=='tld-sheet-v1.3'
+          assert c['spreadsheet_id']=='1I09Na3kPwDtUsW6wlzYtbjwy9iNtZAcLOVDE4g6FJKM'
+          assert c['tab']=='01_SAN_XUAT'
+          assert c['canonical_reference_cell']=='M5'
+          assert c['workers']=={}
+          PY
       - name: Plan live sheet (read only)
         shell: bash
         env:
