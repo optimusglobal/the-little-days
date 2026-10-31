@@ -10,16 +10,18 @@ import time
 import unicodedata
 from urllib.parse import quote
 
-STAGES = ('analysis', 'idea', 'script', 'frame', 'prompt', 'video')
+STAGES = ('analysis', 'gpt_idea', 'gemini_review', 'quality_gate', 'script', 'frame', 'prompt', 'video')
 REQUIRED = {
     'analysis': ('observations', 'source_evidence', 'limitations'),
-    'idea': ('idea', 'hook', 'insight', 'angle'),
+    'gpt_idea': ('idea_gpt',),
+    'gemini_review': ('idea_gemini', 'critique', 'review_evidence'),
+    'quality_gate': ('scores', 'selected', 'verdict', 'rationale'),
     'script': ('script', 'review'),
     'frame': ('frame', 'reference_evidence', 'qc'),
     'prompt': ('prompt',),
     'video': ('video', 'job_id', 'service', 'inspection'),
 }
-WRITES = {'idea': ('idea', 'hook', 'insight', 'angle'), 'script': ('script',),
+WRITES = {'gpt_idea': ('idea_gpt',), 'gemini_review': ('idea_gemini',), 'script': ('script',),
           'frame': ('frame',), 'prompt': ('prompt',)}
 
 
@@ -66,7 +68,7 @@ class Sheets:
         data = []
         for key, value in fields.items():
             index = resolve(headers, self.config['headers'][key])
-            if index in (0, 1, 11) or 'duyệt' in norm(headers[index]) or 'admin' in norm(headers[index]):
+            if index in (0, 1, 8, 11, 12, 15, 17, 21) or 'duyệt' in norm(headers[index]) or 'admin' in norm(headers[index]):
                 raise ValueError('Protected column')
             number, letters = index + 1, ''
             while number:
@@ -92,9 +94,16 @@ def cell(row, index):
 
 def plan(snapshot, config, selected=None):
     headers = snapshot['headers']
-    # L is fixed by owner, regardless of other column movement.
-    if resolve(headers, config['headers']['reference']) != 11:
-        raise ValueError('Canonical reference must remain in column L')
+    # v1.3 canonical identity source is M5, never per-idea M6 or old L5.
+    if config.get('schema_version') != 'tld-sheet-v1.3':
+        raise ValueError('Require v1.3 config')
+    if resolve(headers, config['headers']['reference']) != 12:
+        raise ValueError('Canonical reference must remain in column M')
+    if resolve(headers, config['headers']['idea_gpt']) != 2 or resolve(headers, config['headers']['idea_gemini']) != 3:
+        raise ValueError('GPT/Gemini columns must be C and D')
+    if len(snapshot['rows']) < 1 or not cell(snapshot['rows'][0], 12):
+        raise ValueError('Canonical M5 reference is missing')
+    reference = cell(snapshot['rows'][0], 12)
     service_i = resolve(headers, config['headers']['service'])
     mode_i = resolve(headers, config['headers']['mode'])
     for key in WRITES.values():
@@ -111,7 +120,8 @@ def plan(snapshot, config, selected=None):
         if selected and idea_id != selected:
             continue
         source_version = ''  # Adapter must capture content hash in analysis evidence.
-        entry = {'idea_id': idea_id, 'source': source, 'reference': cell(row, 11),
+        entry = {'idea_id': idea_id, 'source': source, 'reference': reference,
+                 'idea_approved': norm(cell(row, 8)) in ('true','yes','approved','duyet','đã duyệt'),
                  'service': cell(row, service_i), 'mode': cell(row, mode_i),
                  'source_version': source_version}
         entry['revision'] = digest(entry)
@@ -127,12 +137,29 @@ def plan(snapshot, config, selected=None):
 def validate(stage, result, entry):
     if not isinstance(result, dict) or any(not result.get(k) for k in REQUIRED[stage]):
         raise ValueError('Worker result missing required evidence/output fields')
+    if stage == 'gemini_review':
+        evidence = result['review_evidence']
+        if not isinstance(evidence, dict) or evidence.get('provider') != 'Gemini' or not evidence.get('model') or not evidence.get('response_record'):
+            raise ValueError('Real Gemini provider evidence required')
+        if not isinstance(result['critique'], (list, dict)) or not result['critique']:
+            raise ValueError('Specific Gemini critique required')
+    if stage == 'quality_gate':
+        if result['selected'] not in ('gpt', 'gemini', 'none') or result['verdict'] not in ('ready', 'revise', 'insufficient_evidence'):
+            raise ValueError('Invalid gate decision')
+        scores = result['scores']
+        if not isinstance(scores, dict) or not all(k in scores for k in ('gpt','gemini')):
+            raise ValueError('Both candidates must be scored')
+        if any(not isinstance(scores[k], dict) or not isinstance(scores[k].get('total'), (int,float)) or not 0 <= scores[k]['total'] <= 100 or not isinstance(scores[k].get('hard_constraints_pass'),bool) for k in ('gpt','gemini')):
+            raise ValueError('Invalid scored candidate evidence')
+        if result['verdict'] == 'ready' and (result['selected'] == 'none' or scores[result['selected']]['total'] < 85 or not scores[result['selected']]['hard_constraints_pass']):
+            raise ValueError('Quality Gate cannot approve failing candidate')
+        if result['selected'] != 'none' and result['verdict'] != 'ready':
+            raise ValueError('Unapproved candidate cannot be selected')
     if stage == 'script':
-        review = result['review']
-        if not isinstance(review, dict) or review.get('provider') != 'Gemini' or review.get('verdict') != 'ready' or not review.get('evidence'):
-            raise ValueError('Actual Gemini review evidence required')
+        if not result.get('review') or not isinstance(result['review'], dict):
+            raise ValueError('Script must include review evidence')
     if stage == 'frame':
-        if result['reference_evidence'].get('cell') != 'L' or result['reference_evidence'].get('input') != entry['reference'] or not result['reference_evidence'].get('sha256'):
+        if result['reference_evidence'].get('cell') != 'M5' or result['reference_evidence'].get('input') != entry['reference'] or not result['reference_evidence'].get('sha256'):
             raise ValueError('Frame must use actual column L image bytes')
         if result['qc'].get('verdict') != 'ready':
             raise ValueError('Frame QC has not passed')
@@ -158,14 +185,23 @@ def execute(entries, config, runtime, stop='video', sheets=None, snapshot=None):
                 break
             record = state['stages'].get(stage, {})
             if record.get('status') == 'done':
+                validate(stage, record.get('result'), entry)
                 continue
+            if stage == 'script':
+                gate = state['stages'].get('quality_gate', {}).get('result', {})
+                if gate.get('verdict') != 'ready':
+                    report.update(status='blocked_quality_gate', next=stage)
+                    break
+                if not entry['idea_approved']:
+                    report.update(status='blocked_awaiting_owner_approval', next=stage)
+                    break
             if stage in ('frame', 'video') and not entry['reference']:
-                report.update(status='blocked_missing_L', next=stage)
+                report.update(status='blocked_missing_M5', next=stage)
                 break
             if stage == 'video' and norm(entry['service']) not in ('grok', 'gemini'):
                 report.update(status='blocked_service_selection', next=stage)
                 break
-            packet = {'schema_version': 1, 'stage': stage, 'input': entry,
+            packet = {'schema_version': 'tld-sheet-v1.3', 'stage': stage, 'input': entry,
                       'idempotency_key': entry['revision'] + ':' + stage,
                       'previous': state['stages'], 'workflow_file': 'WL.optimus.md'}
             save(folder / (stage + '.request.json'), packet)
@@ -206,7 +242,7 @@ def execute(entries, config, runtime, stop='video', sheets=None, snapshot=None):
             for stage, record in state['stages'].items():
                 if record['status'] == 'done':
                     fields.update({k: record['result'][k] for k in WRITES.get(stage, ())})
-            if fields:
+            if fields and (state['stages'].get('quality_gate', {}).get('result', {}).get('verdict') == 'ready'):
                 sheets.write(current['row_number'], live['headers'], fields)
         if state['stages'].get('video', {}).get('status') == 'done':
             report.update(status='video_result_recorded', next=None)
