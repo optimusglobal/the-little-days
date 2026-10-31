@@ -974,10 +974,20 @@ function tldGeminiReviewGrok15sIdeaTest() {
     const file=DriveApp.createFile('TLD_IDEA_TEST_PROMPT_QA_'+digest.slice(0,12)+'.json',
       JSON.stringify(record,null,2),'application/json');
     props.setProperty(ck,file.getId());
+    // Persist Gemini independently; never overwrite GPT prompt L27 or production O5.
+    lg.getRange('E27').setValue('QC hoàn tất — '+parsed.decision);
+    const logRow=[
+      'idea-test-gemini-grok-15s-'+digest.slice(0,12), 'IDEA_TEST',
+      'Automated Gemini QC of Grok 15s GPT candidate L27', 'Prompt', parsed.decision,
+      '', '', file.getId(), 'Gemini independent assessment; review report JSON', '',
+      'GROK_15S / VOICE_UNVERIFIED / NO_RENDER',
+      'Report: https://drive.google.com/file/d/'+file.getId()+'/view; GPT source L27; SHA256 '+digest
+    ];
+    lg.getRange(lg.getLastRow()+1,1,1,12).setValues([logRow]);
     console.log(JSON.stringify({status:'GEMINI_PROMPT_QA_SAVED',
       report_file_id:file.getId(),weaknesses:parsed.weaknesses.length,
       decision:parsed.decision,voice_lock_verified:false,
-      model_calls:1,sheet_writes:0,render_allowed:false}));
+      model_calls:1,sheet_writes:2,render_allowed:false}));
   }finally{lock.releaseLock();}
 }
 
