@@ -792,3 +792,97 @@ function tldGeminiReviewVideoPromptIdeaTestV2() {
       model_calls:1,sheet_writes:0,render_allowed:false}));
   }finally{lock.releaseLock();}
 }
+
+
+function tldGeminiReviewVoicePromptIdeaTestV3() {
+  const lock=LockService.getScriptLock();
+  if(!lock.tryLock(1000)) throw new Error('Prompt QA already running');
+  try {
+    const ss=SpreadsheetApp.openById(TLD_SHEET_ID);
+    const sh=ss.getSheetByName(TLD_TAB), lg=ss.getSheetByName('03_NHAT_KY_CHAY');
+    if(!sh||!lg||sh.getRange('A5').getDisplayValue()!=='IDEA_TEST')
+      throw new Error('IDEA_TEST not found');
+    if(sh.getRange('I5').getValue()!==true||sh.getRange('L5').getValue()!==true)
+      throw new Error('Idea and storyboard not both approved');
+    if(!sh.getRange('M5').getDisplayValue()||!sh.getRange('N5').getDisplayValue())
+      throw new Error('M5 identity or N5 Frame 0 missing');
+    if(sh.getRange('R5').getDisplayValue()!=='Dừng trước render')
+      throw new Error('Render safety stop changed');
+    if(lg.getRange('A24').getDisplayValue()!=='idea-test-voice-prompt-v3-gpt-source')
+      throw new Error('GPT prompt journal key mismatch');
+    const gpt=lg.getRange('L24').getDisplayValue();
+    if(!gpt.includes('MASTER VOICE CONSISTENCY PROMPT V1') || !gpt.includes('Good boy, Daddy!') || !gpt.includes('VOICE_FATHER') || !gpt.includes('VOICE_DAUGHTER')) throw new Error('Voice Prompt V3 failed content check');
+    const props=PropertiesService.getScriptProperties();
+    const key=props.getProperty('GEMINI_API_KEY');
+    const model=props.getProperty('GEMINI_MODEL')||'gemini-3.5-flash-lite';
+    if(!key||!/^[A-Za-z0-9._-]+$/.test(model)) throw new Error('Invalid Gemini setup');
+    const digest=Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,gpt)
+      .map(b=>('0'+((b+256)%256).toString(16)).slice(-2)).join('');
+    const ck='TLD_PROMPT_QA_'+digest.slice(0,24)+'_'+model;
+    if(props.getProperty(ck)){
+      console.log(JSON.stringify({status:'PROMPT_QA_ALREADY_SAVED',
+        report_file_id:props.getProperty(ck),model_calls:0,sheet_writes:0}));
+      return;
+    }
+    const instruction=[
+      'Act as an independent quality auditor of the IDEA_TEST ACTION-FIRST GPT VIDEO PROMPT below.',
+      'Review the V3 shared prompt-based voice profiles critically; do NOT equate written voice descriptors with actual persistent provider voice IDs. Prior two 10s variants were rejected. Check whether the new approach resolves any blockers.  The mandatory observable actions are A01 dad exits for work, A02 kisses Mother, A03 kisses Daughter, A04 Daughter interrupts, A05 Dad realizes dog forgotten, A06 Dad visibly kisses Dog, A07 Dad leaves, A08 Daughter says Good boy Daddy, A09 reaction from Dad / Mother laugh / Dog wag.',
+      'All 7 immutable dialogue turns must be preserved in exact sequence D01 Papa! (Daughter), D02 No. (Daughter), D03 Oh you too? (Father), D04 Him too? (Father), D05 Yeah. (Daughter), D06 Okay. Bye Papa. (Daughter), D07 Good boy Daddy! (Daughter).',
+      'Check 10s feasibility line by line with explicit bottleneck; do not secretly remove scenes, kisses or speech. Contrast single-clip generation with a controlled audio-first pipeline.',
+      'This is NOT a generated video. The images M5 and Frame 0 N5 are NOT attached;',
+      'you may discuss image-lock instructions, not claim to have examined the actual images.',
+      'The Little Days MUST keep immutable, owner-approved voice identities for FATHER, MOTHER,',
+      'and DAUGHTER across ALL episodes. Generic voice descriptions are insufficient.',
+      'No approved VOICE_REGISTRY, provider voice IDs, or voice samples are provided here.',
+      'Therefore explicitly flag missing voice lock as a production blocker.',
+      'Audit exact speaker ownership, lip sync, Mother laughter (nonverbal), 10-second feasibility,',
+      'DOG kiss visibility, character and wardrobe continuity, no subtitles, and comedy payoff.',
+      'Identify at least three concrete weaknesses with severity, impact and correction.',
+      'Produce a fully rewritten ENGLISH prompt for a 10-second single clip ONLY if plausible;',
+      'otherwise propose a safe duration and explain why. Do not silently remove essential dialogue.',
+      'Vietnamese for analysis, English for video prompt and exact spoken dialogue.',
+      'JSON keys: weaknesses (array of {issue,impact,fix,severity}),',
+      'speaker_lock_findings (array), voice_lock_findings (array),',
+      'ten_second_feasibility (string), proposed_prompt (string),',
+      'decision (REVISE|READY_FOR_OWNER_REVIEW|REJECT_10S),',
+      'production_blockers (array), rationale_vi (string).',
+      'GPT PROMPT TO AUDIT:\n'+gpt
+    ].join('\n');
+    const res=UrlFetchApp.fetch('https://generativelanguage.googleapis.com/v1beta/models/'+
+      encodeURIComponent(model)+':generateContent',{
+        method:'post',contentType:'application/json',
+        headers:{'x-goog-api-key':key},
+        payload:JSON.stringify({contents:[{role:'user',parts:[{text:instruction}]}],
+          generationConfig:{temperature:0.2,maxOutputTokens:4000,
+            responseMimeType:'application/json'}}),muteHttpExceptions:true
+      });
+    if(res.getResponseCode()!==200){
+      console.log(JSON.stringify({status:'PROMPT_QA_HTTP_FAILED',http_status:res.getResponseCode(),
+        model_calls:1,sheet_writes:0}));
+      throw new Error('Gemini prompt review failed; no automatic retries');
+    }
+    const response=JSON.parse(res.getContentText());
+    const parts=(((response.candidates||[])[0]||{}).content||{}).parts||[];
+    const parsed=JSON.parse(parts.map(p=>p.text||'').join(''));
+    if(!Array.isArray(parsed.weaknesses)||parsed.weaknesses.length<3||
+       !Array.isArray(parsed.production_blockers)||!Array.isArray(parsed.voice_lock_findings)||
+       typeof parsed.proposed_prompt!=='string'||parsed.proposed_prompt.length<200||
+       !['REVISE','READY_FOR_OWNER_REVIEW','REJECT_10S'].includes(parsed.decision))
+      throw new Error('Incomplete QA result; no report saved');
+    if(lg.getRange('L24').getDisplayValue()!==gpt)
+      throw new Error('GPT prompt changed during QA; report not saved');
+    const record={schema:'TLD_PROMPT_QA_V1',idea_id:'IDEA_TEST',model:model,
+      reviewed_at:new Date().toISOString(),gpt_prompt_sha256:digest,
+      gpt_prompt_journal:'03_NHAT_KY_CHAY!L24',
+      voice_registry_configured:false,voice_lock_verified:false,
+      render_allowed:false,owner_approved:false,
+      gpt_prompt_preserved:true,gemini_review:parsed};
+    const file=DriveApp.createFile('TLD_IDEA_TEST_PROMPT_QA_'+digest.slice(0,12)+'.json',
+      JSON.stringify(record,null,2),'application/json');
+    props.setProperty(ck,file.getId());
+    console.log(JSON.stringify({status:'GEMINI_PROMPT_QA_SAVED',
+      report_file_id:file.getId(),weaknesses:parsed.weaknesses.length,
+      decision:parsed.decision,voice_lock_verified:false,
+      model_calls:1,sheet_writes:0,render_allowed:false}));
+  }finally{lock.releaseLock();}
+}
