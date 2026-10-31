@@ -993,21 +993,44 @@ function tldGeminiReviewGrok15sIdeaTest() {
 
 
 
-/** Install once, then Gemini prompt QC runs automatically every 5 minutes. No render or main-sheet writes. */
+/** Event-driven QC for human edits, 1-minute safety fallback for API-based writes.
+ * Sheets API writes NEVER trigger onEdit; producing workflow must invoke QC explicitly.
+ */
 function tldInstallGeminiAutoQc() {
-  const fn='tldGeminiAutoQcTick';
-  const existing=ScriptApp.getProjectTriggers().filter(t=>t.getHandlerFunction()===fn);
-  if(existing.length===0) ScriptApp.newTrigger(fn).timeBased().everyMinutes(5).create();
-  console.log(JSON.stringify({status:'AUTO_QC_TRIGGER_CONFIGURED',existing_triggers:existing.length,new_triggers:existing.length?0:1,interval_minutes:5}));
+  const all=ScriptApp.getProjectTriggers();
+  all.filter(t=>['tldGeminiAutoQcTick','tldGeminiQcOnEdit'].includes(t.getHandlerFunction()))
+    .forEach(t=>ScriptApp.deleteTrigger(t));
+  ScriptApp.newTrigger('tldGeminiAutoQcTick').timeBased().everyMinutes(1).create();
+  ScriptApp.newTrigger('tldGeminiQcOnEdit')
+    .forSpreadsheet(TLD_SHEET_ID).onEdit().create();
+  console.log(JSON.stringify({status:'AUTO_QC_TRIGGERS_CONFIGURED',
+    interval_minutes:1,events:['manual_prompt_edit'],deleted_old:all.filter(t=>['tldGeminiAutoQcTick','tldGeminiQcOnEdit'].includes(t.getHandlerFunction())).length}));
 }
 
-/** Idempotent: digest+model dedup occurs inside the per-idea reviewer. */
+/** Existing 5-minute trigger upgrades itself on next tick. Does not need another owner Run. */
 function tldGeminiAutoQcTick() {
+  const props=PropertiesService.getScriptProperties();
+  if(props.getProperty('TLD_QC_TRIGGER_V2')!=='1') {
+    tldInstallGeminiAutoQc();
+    props.setProperty('TLD_QC_TRIGGER_V2','1');
+  }
+  tldGeminiAutoQcCheck();
+}
+
+/** Fires immediately for USER edits only; programmatic writes use fallback timer. */
+function tldGeminiQcOnEdit(e) {
+  if(!e||!e.range) return;
+  if(e.range.getSheet().getName()!=='03_NHAT_KY_CHAY') return;
+  if(e.range.getRow()!==27 || e.range.getColumn()!==12) return;
+  tldGeminiAutoQcCheck();
+}
+
+/** Existing idempotent digest+model dedup is enforced inside the reviewer. */
+function tldGeminiAutoQcCheck() {
   const ss=SpreadsheetApp.openById(TLD_SHEET_ID);
   const lg=ss.getSheetByName('03_NHAT_KY_CHAY');
   if(!lg || lg.getRange('A27').getDisplayValue()!=='idea-test-grok-15s-gpt-qc-source') return;
   const prompt=lg.getRange('L27').getDisplayValue();
   if(!prompt || prompt.length<500) return;
-  // Reviewer validates safety stop and uses digest-based dedup before any API call.
   tldGeminiReviewGrok15sIdeaTest();
 }
