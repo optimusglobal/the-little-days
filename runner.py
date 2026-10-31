@@ -124,7 +124,7 @@ def plan(snapshot, config, selected=None):
                  'idea_approved': norm(cell(row, 8)) in ('true','yes','approved','duyet','đã duyệt'),
                  'service': cell(row, service_i), 'mode': cell(row, mode_i),
                  'source_version': source_version}
-        entry['revision'] = digest(entry)
+        entry['revision'] = digest({k: v for k, v in entry.items() if k != 'idea_approved'})
         entry['row_number'] = offset
         entry['existing'] = {field: cell(row, resolve(headers, config['headers'][field]))
                              for fields in WRITES.values() for field in fields}
