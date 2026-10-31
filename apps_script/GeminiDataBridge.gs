@@ -406,3 +406,94 @@ function tldReviewIdentityAndQualityGate() {
       gate_status:review.gate_status,recommended_version:review.recommended_version}));
   } finally { lock.releaseLock(); }
 }
+
+/**
+ * Phase 6: separate AUDIO QC. The model receives the ORIGINAL MP4 bytes,
+ * not a prior model's transcript. Its output is explicitly not human verified.
+ * One call, cached by source hash. No Sheet changes, no production approvals.
+ */
+function tldRunAudioQcIdeaTest() {
+  const lock=LockService.getScriptLock();
+  if(!lock.tryLock(1000)) throw new Error('Audio QC already in progress');
+  try {
+    const sh=SpreadsheetApp.openById(TLD_SHEET_ID).getSheetByName(TLD_TAB);
+    if(!sh || sh.getRange('A5').getDisplayValue().trim()!=='IDEA_TEST')
+      throw new Error('Unexpected idea row');
+    const link=sh.getRange('B5').getDisplayValue().trim();
+    const m=link.match(/^https:\/\/drive\.google\.com\/file\/d\/([A-Za-z0-9_-]+)(?:\/|$)/);
+    if(!m) throw new Error('B5 is not a direct Drive file URL');
+    const file=DriveApp.getFileById(m[1]);
+    if(file.getMimeType()!=='video/mp4' || file.getSize()>8*1024*1024)
+      throw new Error('MP4 missing, wrong MIME or too large for inline analysis');
+    const bytes=file.getBlob().getBytes();
+    const hash=Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256,bytes)
+      .map(b=>('0'+((b+256)%256).toString(16)).slice(-2)).join('');
+    const props=PropertiesService.getScriptProperties();
+    const model=props.getProperty('GEMINI_MODEL')||'gemini-3.5-flash-lite';
+    const key=props.getProperty('GEMINI_API_KEY');
+    if(!key || !/^[A-Za-z0-9._-]+$/.test(model)) throw new Error('Invalid API settings');
+    const ck='TLD_AUDIO_QC_'+hash.slice(0,24)+'_'+model;
+    const previous=props.getProperty(ck);
+    if(previous){
+      console.log(JSON.stringify({status:'AUDIO_QC_ALREADY_SAVED',
+        report_file_id:previous,model_calls:0,sheet_writes:0}));
+      return;
+    }
+    const prompt=[
+      'Independent audio-focused transcription of the attached short video.',
+      'LISTEN to audio rather than copying visual guesses or old AI logs.',
+      'Return exact audible English speech in time order, with approximate start/end seconds.',
+      'For each turn: speaker (FATHER/MOTHER/DAUGHTER/UNKNOWN), text,',
+      'confidence 0..1, uncertain_words, evidence_note. Do not fabricate missing words.',
+      'Check specifically whether utterances such as Papa, Oh you too, Him too,',
+      'Okay Bye Papa are present; mark absent or uncertain when appropriate.',
+      'List sound cues and unresolved overlaps, and whether a human review is needed.',
+      'Explain uncertainty and remarks in Vietnamese. Transcribed dialogue stays English.',
+      'Return JSON keys: turns (array of objects start_s,end_s,speaker,text,',
+      'confidence,uncertain_words,evidence_note), sound_cues (array),',
+      'unresolved_audio (array), suspected_omissions (array),',
+      'needs_human_review (boolean), assessment_vi (string).',
+      'This is AI audio QC, NOT independently verified ground truth.'
+    ].join(' ');
+    const resp=UrlFetchApp.fetch(
+      'https://generativelanguage.googleapis.com/v1beta/models/'+
+      encodeURIComponent(model)+':generateContent',{
+        method:'post',contentType:'application/json',
+        headers:{'x-goog-api-key':key},
+        payload:JSON.stringify({contents:[{role:'user',parts:[
+          {text:prompt},{inlineData:{mimeType:'video/mp4',
+            data:Utilities.base64Encode(bytes)}}
+        ]}],generationConfig:{temperature:0,maxOutputTokens:2800,
+          responseMimeType:'application/json'}}),muteHttpExceptions:true
+      });
+    if(resp.getResponseCode()!==200){
+      console.log(JSON.stringify({status:'AUDIO_QC_FAILED',
+        http_status:resp.getResponseCode(),model_calls:1,sheet_writes:0}));
+      throw new Error('Audio QC Gemini HTTP error. No automatic retry');
+    }
+    const result=JSON.parse(resp.getContentText());
+    const output=(((result.candidates||[])[0]||{}).content||{}).parts
+      ?.map(p=>p.text||'').join('')||'';
+    const parsed=JSON.parse(output);
+    if(!Array.isArray(parsed.turns)||!Array.isArray(parsed.unresolved_audio)||
+       typeof parsed.assessment_vi!=='string'||
+       parsed.turns.some(t=>typeof t.text!=='string'||
+          !['FATHER','MOTHER','DAUGHTER','UNKNOWN'].includes(t.speaker)))
+      throw new Error('Invalid transcript. No file saved.');
+    if(sh.getRange('B5').getDisplayValue().trim()!==link)
+      throw new Error('Source changed during Audio QC');
+    const record={schema:'TLD_AUDIO_QC_V1',idea_id:'IDEA_TEST',
+      recorded_at:new Date().toISOString(),model:model,
+      source_file_id:m[1],source_sha256:hash,
+      transcript_status:'AI_TRANSCRIPTION_NOT_HUMAN_VERIFIED',
+      approval:'NOT_APPROVED',quality_gate:'WAITING_FOR_AUDIO_REVIEW',
+      audio_result:parsed};
+    const out=DriveApp.createFile('TLD_IDEA_TEST_AUDIO_QC_'+hash.slice(0,12)+
+      '.json',JSON.stringify(record,null,2),'application/json');
+    props.setProperty(ck,out.getId());
+    console.log(JSON.stringify({status:'AUDIO_QC_SAVED',
+      report_file_id:out.getId(),turns:parsed.turns.length,
+      needs_human_review:parsed.needs_human_review,
+      model_calls:1,sheet_writes:0,quality_gate:'BLOCKED'}));
+  }finally{lock.releaseLock();}
+}
