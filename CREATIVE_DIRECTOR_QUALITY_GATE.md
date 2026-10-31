@@ -70,3 +70,9 @@ The native Google Sheet v1.3 (ID `1I09Na3kPwDtUsW6wlzYtbjwy9iNtZAcLOVDE4g6FJKM`,
 8. Owner approval is explicitly recorded before downstream creative production.
 9. Quota/503 handling preserves submission intent and resume safety.
 10. No render or publish actions occur in creative review tests.
+
+## Owner decision lock — 2026-10-31
+
+Quality Gate has a bounded decision cycle. Scores >=85/100 with all hard constraints satisfied qualify for owner idea review; 75-84 permits one targeted revision; below 75 requires rewrite or rejection. After at most TWO targeted revision rounds, output SELECT or REJECT, never another open-ended draft. Any blocking identity, dialogue or feasibility defect overrides the numeric score. SELECT means candidate for final QC, not permission to render: owner idea/script approval is still mandatory.
+
+For IDEA_TEST, the owner-selected candidate for FINAL QC is v3.2, documented in 03_NHAT_KY_CHAY, not a replacement for separate GPT C5 and Gemini D5. Do not create v3.3 merely to rerun general review. Final QC must resolve audio attribution, identity M5 and shot feasibility and make an explicit pass/fail decision. Until then admin approvals remain false, production remains pending, and no render is authorized. Preserve source reports and all historical QC records. This decision updates the earlier provisional 70-84 band.
