@@ -620,10 +620,10 @@ function tldGeminiReviewVideoPromptIdeaTest() {
       throw new Error('M5 identity or N5 Frame 0 missing');
     if(sh.getRange('R5').getDisplayValue()!=='Dừng trước render')
       throw new Error('Render safety stop changed');
-    if(lg.getRange('A17').getDisplayValue()!=='idea-test-prompt-v3-for-gemini-qc')
+    if(lg.getRange('A19').getDisplayValue()!=='idea-test-action-first-v1-gpt')
       throw new Error('GPT prompt journal key mismatch');
-    const gpt=lg.getRange('L17').getDisplayValue();
-    if(!gpt.includes('STRICT SPEAKER LOCK')) throw new Error('GPT V3 candidate missing');
+    const gpt=lg.getRange('L19').getDisplayValue();
+    if(!gpt.includes('ACTION_BLUEPRINT_REF')||!gpt.includes('Good boy, Daddy!')) throw new Error('Action-First v1 prompt missing');
     const props=PropertiesService.getScriptProperties();
     const key=props.getProperty('GEMINI_API_KEY');
     const model=props.getProperty('GEMINI_MODEL')||'gemini-3.5-flash-lite';
@@ -637,7 +637,10 @@ function tldGeminiReviewVideoPromptIdeaTest() {
       return;
     }
     const instruction=[
-      'Act as an independent quality auditor of the GPT VIDEO GENERATION PROMPT below.',
+      'Act as an independent quality auditor of the IDEA_TEST ACTION-FIRST GPT VIDEO PROMPT below.',
+      'The mandatory observable actions are A01 dad exits for work, A02 kisses Mother, A03 kisses Daughter, A04 Daughter interrupts, A05 Dad realizes dog forgotten, A06 Dad visibly kisses Dog, A07 Dad leaves, A08 Daughter says Good boy Daddy, A09 reaction from Dad / Mother laugh / Dog wag.',
+      'All 7 immutable dialogue turns must be preserved in exact sequence D01 Papa! (Daughter), D02 No. (Daughter), D03 Oh you too? (Father), D04 Him too? (Father), D05 Yeah. (Daughter), D06 Okay. Bye Papa. (Daughter), D07 Good boy Daddy! (Daughter).',
+      'Check 10s feasibility line by line with explicit bottleneck; do not secretly remove scenes, kisses or speech. Contrast single-clip generation with a controlled audio-first pipeline.',
       'This is NOT a generated video. The images M5 and Frame 0 N5 are NOT attached;',
       'you may discuss image-lock instructions, not claim to have examined the actual images.',
       'The Little Days MUST keep immutable, owner-approved voice identities for FATHER, MOTHER,',
@@ -678,11 +681,11 @@ function tldGeminiReviewVideoPromptIdeaTest() {
        typeof parsed.proposed_prompt!=='string'||parsed.proposed_prompt.length<200||
        !['REVISE','READY_FOR_OWNER_REVIEW','REJECT_10S'].includes(parsed.decision))
       throw new Error('Incomplete QA result; no report saved');
-    if(lg.getRange('L17').getDisplayValue()!==gpt)
+    if(lg.getRange('L19').getDisplayValue()!==gpt)
       throw new Error('GPT prompt changed during QA; report not saved');
     const record={schema:'TLD_PROMPT_QA_V1',idea_id:'IDEA_TEST',model:model,
       reviewed_at:new Date().toISOString(),gpt_prompt_sha256:digest,
-      gpt_prompt_journal:'03_NHAT_KY_CHAY!L17',
+      gpt_prompt_journal:'03_NHAT_KY_CHAY!L19',
       voice_registry_configured:false,voice_lock_verified:false,
       render_allowed:false,owner_approved:false,
       gpt_prompt_preserved:true,gemini_review:parsed};
