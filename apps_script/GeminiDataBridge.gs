@@ -282,3 +282,127 @@ function tldReviewIdeaTestWithVideo() {
       d5_preserved:true,quality_gate:'NOT_RUN'}));
   } finally { lock.releaseLock(); }
 }
+
+/**
+ * Phase 5: audit the previously saved source-video review against the actual
+ * M5 CHARACTER IMAGE and the live GPT/Gemini versions. One model call.
+ * Stores a new immutable Drive JSON report; does NOT alter Sheet or approve.
+ * The old video report is reused, so video is NOT uploaded again.
+ */
+function tldReviewIdentityAndQualityGate() {
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(1000)) throw new Error('Another TLD review is running');
+  try {
+    const sourceReportId = '1h0Sr8Eu1oQBDPQr95wfXtBsrcUl70bpf';
+    const sheet = SpreadsheetApp.openById(TLD_SHEET_ID).getSheetByName(TLD_TAB);
+    if (!sheet || sheet.getRange('A5').getDisplayValue().trim() !== 'IDEA_TEST')
+      throw new Error('IDEA_TEST row has changed');
+    const sourceLink = sheet.getRange('B5').getDisplayValue().trim();
+    const gpt = sheet.getRange('C5').getDisplayValue().trim();
+    const geminiOld = sheet.getRange('D5').getDisplayValue().trim();
+    const identityUrl = sheet.getRange('M5').getDisplayValue().trim();
+    if (!sourceLink || !gpt || !geminiOld || !identityUrl)
+      throw new Error('Missing required B5/C5/D5/M5 data');
+    const sourceMatch = sourceLink.match(/^https:\/\/drive\.google\.com\/file\/d\/([A-Za-z0-9_-]+)(?:\/|$)/);
+    const identityMatch = identityUrl.match(/^https:\/\/drive\.google\.com\/file\/d\/([A-Za-z0-9_-]+)(?:\/|$)/);
+    if (!sourceMatch || !identityMatch) throw new Error('Invalid Drive source/reference link');
+    const record = JSON.parse(DriveApp.getFileById(sourceReportId).getBlob().getDataAsString('UTF-8'));
+    if (record.schema !== 'TLD_GEMINI_SOURCE_REVIEW_V1' ||
+        record.idea_id !== 'IDEA_TEST' ||
+        record.source_drive_id !== sourceMatch[1] ||
+        record.identity_image_visually_reviewed !== false ||
+        !record.gemini_result?.visual_observations?.length)
+      throw new Error('Source review evidence mismatch: stopped');
+    const img = DriveApp.getFileById(identityMatch[1]);
+    if (!['image/png','image/jpeg','image/webp'].includes(img.getMimeType()))
+      throw new Error('M5 is not a supported image');
+    if (!img.getSize() || img.getSize() > 6*1024*1024)
+      throw new Error('M5 image too large');
+    const imageBytes = img.getBlob().getBytes();
+    const hash = value => Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, value)
+      .map(b=>('0'+((b+256)%256).toString(16)).slice(-2)).join('');
+    const imageSha = hash(imageBytes);
+    const ideaHash = hash(gpt+'\n---GEMINI---\n'+geminiOld);
+    const props = PropertiesService.getScriptProperties();
+    const cacheKey = 'TLD_ID_GATE_' + record.source_sha256.slice(0,12) +
+      '_' + imageSha.slice(0,12) + '_' + ideaHash.slice(0,12);
+    if (props.getProperty(cacheKey)) {
+      console.log(JSON.stringify({status:'IDENTITY_QC_ALREADY_SAVED',
+        report_file_id:props.getProperty(cacheKey),model_calls:0,sheet_writes:0}));
+      return;
+    }
+    const key = props.getProperty('GEMINI_API_KEY');
+    const model = props.getProperty('GEMINI_MODEL') || 'gemini-3.5-flash-lite';
+    if (!key || !/^[A-Za-z0-9._-]+$/.test(model)) throw new Error('Invalid Gemini configuration');
+    const prompt = [
+      'Bạn là kiểm duyệt viên sáng tạo độc lập cho The Little Days.',
+      'Quan sát ẢNH M5 ĐÍNH KÈM để xác minh nhận diện 4 nhân vật bố, mẹ, bé gái, chó.',
+      'Báo cáo video B5 đính dưới đây là hồ sơ Gemini trước đó: KHÔNG phải video bạn được xem trong lượt này.',
+      'Phân biệt dữ kiện nguồn và nhân vật series. Không thay chó M5 bằng chó trong video gốc.',
+      'Phiên âm cũ do AI tự nhận là high confidence, KHÔNG được gọi là human verified.',
+      'Phản biện nội dung GPT C5 và bản Gemini D5, phát hiện lỗi liên tục, đạo cụ tự thêm, nhịp diễn, tuổi bé.',
+      'Trình bày BẰNG TIẾNG VIỆT, riêng lời thoại nhân vật viết US English tự nhiên.',
+      'Tạo phiên bản Gemini cải tiến mới, giữ đầy đủ 4 nhân vật theo M5, không ép cắt thoại.',
+      'Đánh giá mỗi phiên bản GPT và Gemini cũ theo 7 hạng mục trọng số: hài 25, hook 20,',
+      'US English 15, diễn xuất 15, nhịp 10, nhận diện 10, khả thi 5.',
+      'Nếu thiếu bằng chứng để phê duyệt, kết luận NEEDS_REVISION hoặc INSUFFICIENT_EVIDENCE.',
+      'Không mặc định Gemini thắng và không tự phê duyệt hay render.',
+      'JSON keys: identity_observations (array), source_vs_identity (array),',
+      'audio_caveats (array), gpt_weaknesses (array), gemini_weaknesses (array),',
+      'gemini_rewrite_v2 (string), gpt_score (object keys comedy,hook,english,acting,timing,identity,feasibility,total),',
+      'gemini_old_score (same keys), recommended_version (GPT|GEMINI_OLD|NEITHER),',
+      'gate_status (NEEDS_REVISION|INSUFFICIENT_EVIDENCE|READY_FOR_OWNER_REVIEW),',
+      'rationale (string), limitations (array).',
+      'HỒ SƠ PHÂN TÍCH VIDEO ĐÃ CÓ:\n'+JSON.stringify(record.gemini_result),
+      'IDEA GPT C5:\n'+gpt,
+      'IDEA GEMINI CŨ D5:\n'+geminiOld
+    ].join('\n\n');
+    const res = UrlFetchApp.fetch(
+      'https://generativelanguage.googleapis.com/v1beta/models/'+
+      encodeURIComponent(model)+':generateContent', {
+        method:'post',contentType:'application/json',
+        headers:{'x-goog-api-key':key},
+        payload:JSON.stringify({contents:[{role:'user',parts:[
+          {text:prompt},{inlineData:{mimeType:img.getMimeType(),
+            data:Utilities.base64Encode(imageBytes)}}
+        ]}],generationConfig:{temperature:0.2,maxOutputTokens:5000,
+          responseMimeType:'application/json'}}),
+        muteHttpExceptions:true
+      });
+    if (res.getResponseCode() !== 200) {
+      console.log(JSON.stringify({status:'IDENTITY_QC_HTTP_FAILED',
+        code:res.getResponseCode(),model_calls:1,sheet_writes:0}));
+      throw new Error('Gemini identity QC failed; do not retry blindly');
+    }
+    const api = JSON.parse(res.getContentText());
+    const parts = (((api.candidates||[])[0]||{}).content||{}).parts||[];
+    const review = JSON.parse(parts.map(x=>x.text||'').join(''));
+    if (!Array.isArray(review.identity_observations) ||
+        !Array.isArray(review.gpt_weaknesses) ||
+        !Array.isArray(review.gemini_weaknesses) ||
+        typeof review.gemini_rewrite_v2 !== 'string' ||
+        review.gemini_rewrite_v2.length < 250 ||
+        !['GPT','GEMINI_OLD','NEITHER'].includes(review.recommended_version) ||
+        !['NEEDS_REVISION','INSUFFICIENT_EVIDENCE','READY_FOR_OWNER_REVIEW'].includes(review.gate_status))
+      throw new Error('Invalid identity QC response; no output saved');
+    if (sheet.getRange('C5').getDisplayValue().trim() !== gpt ||
+        sheet.getRange('D5').getDisplayValue().trim() !== geminiOld ||
+        sheet.getRange('M5').getDisplayValue().trim() !== identityUrl)
+      throw new Error('Sheet input changed during QC; no output saved');
+    const output = {
+      schema:'TLD_IDENTITY_QC_V1',idea_id:'IDEA_TEST',
+      recorded_at:new Date().toISOString(),source_report_id:sourceReportId,
+      source_sha256:record.source_sha256,identity_drive_id:identityMatch[1],
+      identity_sha256:imageSha,idea_pair_sha256:ideaHash,model:model,
+      reference_m5_supplied_to_model:true,source_video_reused_as_evidence:true,
+      source_video_resubmitted:false,approval:'NOT_APPROVED',
+      sheet_writes:0,gemini_result:review
+    };
+    const file=DriveApp.createFile('TLD_IDEA_TEST_IDENTITY_QC_'+imageSha.slice(0,12)+
+      '.json',JSON.stringify(output,null,2),'application/json');
+    props.setProperty(cacheKey,file.getId());
+    console.log(JSON.stringify({status:'IDENTITY_QC_SAVED',report_file_id:file.getId(),
+      model_calls:1,sheet_writes:0,d5_preserved:true,
+      gate_status:review.gate_status,recommended_version:review.recommended_version}));
+  } finally { lock.releaseLock(); }
+}
