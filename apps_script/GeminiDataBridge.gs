@@ -165,3 +165,120 @@ function tldReviewIdeaTest() {
     lock.releaseLock();
   }
 }
+
+/**
+ * Phase 4: independent review grounded in REAL source-video bytes + GPT C5.
+ * Never overwrites D5 or any admin cells. Stores a versioned JSON evidence
+ * report in Google Drive. One model call if no completed checkpoint exists.
+ *
+ * Use tldReviewIdeaTestWithVideo() manually for IDEA_TEST.
+ */
+function tldReviewIdeaTestWithVideo() {
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(1000)) throw new Error('Video review already running');
+  try {
+    const sheet = SpreadsheetApp.openById(TLD_SHEET_ID).getSheetByName(TLD_TAB);
+    if (!sheet || sheet.getRange('A5').getDisplayValue().trim() !== 'IDEA_TEST')
+      throw new Error('IDEA_TEST is not in A5');
+    const source = sheet.getRange('B5').getDisplayValue().trim();
+    const gpt = sheet.getRange('C5').getDisplayValue().trim();
+    const identity = sheet.getRange('M5').getDisplayValue().trim();
+    if (!gpt || !source || !identity) throw new Error('B5/C5/M5 must be populated');
+    const match = source.match(/^https:\/\/drive\.google\.com\/file\/d\/([A-Za-z0-9_-]+)(?:\/|$)/);
+    if (!match) throw new Error('B5 must be a direct Google Drive file link');
+    const file = DriveApp.getFileById(match[1]);
+    if (file.getMimeType() !== 'video/mp4')
+      throw new Error('Only verified MP4 sources are supported for this test');
+    const size = file.getSize();
+    // inlineData increases base64 payload; keep API request well under 20 MB
+    if (!size || size > 8 * 1024 * 1024)
+      throw new Error('Video too large for inline review: use Files API for larger files');
+    const blob = file.getBlob();
+    const bytes = blob.getBytes();
+    const digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, bytes);
+    const sha = digest.map(b => ('0' + ((b + 256) % 256).toString(16)).slice(-2)).join('');
+    const props = PropertiesService.getScriptProperties();
+    const model = props.getProperty('GEMINI_MODEL') || 'gemini-3.5-flash-lite';
+    const key = props.getProperty('GEMINI_API_KEY');
+    if (!key || !/^[A-Za-z0-9._-]+$/.test(model)) throw new Error('Missing key or invalid model');
+    const gptHash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, gpt)
+      .map(b => ('0' + ((b + 256) % 256).toString(16)).slice(-2)).join('');
+    const cacheKey = 'TLD_VIDEO_REVIEW_' + sha.slice(0,16) + '_' + gptHash.slice(0,16);
+    const existing = props.getProperty(cacheKey);
+    if (existing) {
+      console.log(JSON.stringify({status:'VIDEO_REVIEW_ALREADY_SAVED',
+        report_file_id:existing, model_calls:0, sheet_writes:0}));
+      return;
+    }
+    const instruction = [
+      'You are an independent US-family-comedy creative editor.',
+      'First WATCH and LISTEN to the attached original MP4 (video + audio).',
+      'Then critique the GPT adaptation below, identify at least three concrete weaknesses,',
+      'and rewrite a distinct, more effective idea while preserving the source premise.',
+      'No invented dialogue: explicitly distinguish verified audible speech from uncertain audio.',
+      'Four characters FATHER, MOTHER, DAUGHTER age about 2, DOG.',
+      'Character reference M5 exists but its image is NOT supplied in this call;',
+      'do NOT claim that you visually verified exact character appearance.',
+      'Do not add unrelated props or change the physical positions without justification.',
+      'Write observations, critique, and rewritten idea in VIETNAMESE.',
+      'Only any actual proposed character DIALOGUE or generation PROMPTS should be US English.',
+      'Return JSON keys: visual_observations (array), audio_observations (array),',
+      'audio_confidence (high|medium|low), weaknesses (array of objects issue,impact,fix),',
+      'rewritten_idea (string), source_fidelity_notes (array), limitations (array).',
+      'GPT IDEA FROM C5:\n' + gpt
+    ].join('\n');
+    const payload = {
+      contents:[{role:'user',parts:[
+        {text:instruction},
+        {inlineData:{mimeType:'video/mp4',data:Utilities.base64Encode(bytes)}}
+      ]}],
+      generationConfig:{temperature:0.3,maxOutputTokens:3500,responseMimeType:'application/json'}
+    };
+    const endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/' +
+      encodeURIComponent(model) + ':generateContent';
+    const res = UrlFetchApp.fetch(endpoint,{
+      method:'post',contentType:'application/json',
+      headers:{'x-goog-api-key':key},payload:JSON.stringify(payload),
+      muteHttpExceptions:true
+    });
+    if (res.getResponseCode() !== 200) {
+      console.log(JSON.stringify({status:'VIDEO_REVIEW_HTTP_ERROR',
+        http_status:res.getResponseCode(),model:model,sheet_writes:0}));
+      throw new Error('Gemini media review failed; no automatic retry');
+    }
+    const answer = JSON.parse(res.getContentText());
+    const output = (((answer.candidates||[])[0]||{}).content||{}).parts
+      ?.map(p=>p.text||'').join('')||'';
+    const review = JSON.parse(output);
+    if (!Array.isArray(review.visual_observations) ||
+        !Array.isArray(review.audio_observations) ||
+        !Array.isArray(review.weaknesses) || review.weaknesses.length < 3 ||
+        !review.weaknesses.every(w=>w.issue && w.impact && w.fix) ||
+        !['high','medium','low'].includes(review.audio_confidence) ||
+        typeof review.rewritten_idea !== 'string' || review.rewritten_idea.length < 300)
+      throw new Error('Incomplete Gemini media response; no record saved');
+    if (sheet.getRange('B5').getDisplayValue().trim() !== source ||
+        sheet.getRange('C5').getDisplayValue().trim() !== gpt ||
+        sheet.getRange('M5').getDisplayValue().trim() !== identity)
+      throw new Error('Input changed while reviewing; no record saved');
+    const record = {
+      schema:'TLD_GEMINI_SOURCE_REVIEW_V1',idea_id:'IDEA_TEST',
+      recorded_at:new Date().toISOString(),model:model,
+      source_drive_id:match[1],source_sha256:sha,source_size_bytes:size,
+      gpt_sha256:gptHash,identity_reference_cell:'M5',
+      identity_image_visually_reviewed:false,
+      audio_verification:'model_reported_not_human_verified',
+      approval:'NOT_APPROVED',quality_gate:'NOT_RUN',
+      gemini_result:review
+    };
+    const name = 'TLD_IDEA_TEST_GEMINI_VIDEO_REVIEW_' + sha.slice(0,12) + '.json';
+    // Create standalone evidence file rather than overwrite current D5/T5/AF5.
+    const out = DriveApp.createFile(name,JSON.stringify(record,null,2),'application/json');
+    props.setProperty(cacheKey,out.getId());
+    console.log(JSON.stringify({status:'GEMINI_VIDEO_REVIEW_SAVED',
+      report_file_id:out.getId(),model:model,source_bytes:size,
+      weaknesses:review.weaknesses.length,
+      audio_confidence:review.audio_confidence,model_calls:1,sheet_writes:0,
+      d5_preserved:true,quality_gate:'NOT_RUN'}));
+  } finally { lock.releaseLock(); }
+}
