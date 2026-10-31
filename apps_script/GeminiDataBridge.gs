@@ -543,3 +543,60 @@ function tldTestBoundedQualityGate() {
   console.log(JSON.stringify({status:'BOUNDED_QC_POLICY_OK',
     scenarios:scenarios.length,model_calls:0,sheet_writes:0,render_calls:0}));
 }
+
+/**
+ * Read-only FINAL QC preflight for IDEA_TEST, tied to live Sheet and saved
+ * evidence. This is not a scoring call and never modifies production state.
+ */
+function tldPreflightIdeaTestFinalQc() {
+  const ss=SpreadsheetApp.openById(TLD_SHEET_ID);
+  const sheet=ss.getSheetByName(TLD_TAB);
+  const journal=ss.getSheetByName('03_NHAT_KY_CHAY');
+  if(!sheet||!journal) throw new Error('Missing required sheet');
+  const row=sheet.getRange('A5:AF5').getDisplayValues()[0];
+  if(row[0]!=='IDEA_TEST') throw new Error('Expected IDEA_TEST at A5');
+  const logs=journal.getRange('A5:L12').getDisplayValues();
+  const decision=logs.find(r=>r[0]==='idea-test-owner-decision-lock-20261031');
+  const policy=logs.find(r=>r[0]==='idea-test-final-qc-policy-20261031');
+  if(!decision||!policy) throw new Error('Decision/policy log missing');
+  if(!decision[10].includes('SELECTED_FOR_FINAL_QC') ||
+     !policy[10].includes('SELECTED_FOR_FINAL_QC'))
+    throw new Error('Final QC candidate log mismatch');
+  const ids={
+    source_report:'1h0Sr8Eu1oQBDPQr95wfXtBsrcUl70bpf',
+    identity_report:'1sNnU5JkTUoBmSa8AaTBHh54yEte0z-8s',
+    audio_report:'17yuEZ-nR5_PYJ1LHtMvueNCQeaOhO4Qo'
+  };
+  const reports={};
+  Object.keys(ids).forEach(k=>{
+    reports[k]=JSON.parse(DriveApp.getFileById(ids[k])
+      .getBlob().getDataAsString('UTF-8'));
+    if(reports[k].idea_id!=='IDEA_TEST') throw new Error('Mismatched '+k);
+  });
+  if(reports.source_report.source_sha256!==reports.identity_report.source_sha256 ||
+     reports.source_report.source_sha256!==reports.audio_report.source_sha256)
+    throw new Error('Source SHA mismatch across evidence');
+  const source=String(row[1]).match(/\/file\/d\/([A-Za-z0-9_-]+)/);
+  const identity=String(row[12]).match(/\/file\/d\/([A-Za-z0-9_-]+)/);
+  if(!source||!identity||
+     source[1]!==reports.source_report.source_drive_id||
+     identity[1]!==reports.identity_report.identity_drive_id)
+    throw new Error('Live Sheet inputs differ from stored evidence');
+  const approvals={idea:row[8]==='TRUE',script:row[11]==='TRUE',final:row[21]==='TRUE'};
+  if(approvals.idea||approvals.script||approvals.final)
+    throw new Error('Admin approval has changed; manual reconciliation required');
+  if(row[17]!=='Dừng trước render'||row[18]!=='Chờ QC')
+    throw new Error('Unexpected stop point or production status');
+  const result={
+    status:'FINAL_QC_PREFLIGHT_BLOCKED',idea:'IDEA_TEST',
+    candidate:'V3_2',source_evidence_matched:true,
+    image_m5_evidence_matched:true,audio_ai_only:
+      reports.audio_report.transcript_status==='AI_TRANSCRIPTION_NOT_HUMAN_VERIFIED',
+    human_audio_verified:false,
+    scored_final_candidate:false,
+    candidate_owner_approved:false,
+    render_allowed:false,model_calls:0,sheet_writes:0
+  };
+  console.log(JSON.stringify(result));
+  return result;
+}
