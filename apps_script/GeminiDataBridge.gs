@@ -84,3 +84,84 @@ function tldTestGeminiApi() {
     model_calls: 1
   }));
 }
+
+/**
+ * Phase 3: one Gemini critique and independent rewrite for IDEA_TEST.
+ * This step DOES NOT read video bytes or verify audio. It only checks GPT
+ * against its stated video observations; no quality approval, no render.
+ * Run manually once. Never overwrite an existing Gemini draft.
+ */
+function tldReviewIdeaTest() {
+  const lock = LockService.getScriptLock();
+  if (!lock.tryLock(1000)) throw new Error('Review already running');
+  try {
+    const sheet = SpreadsheetApp.openById(TLD_SHEET_ID).getSheetByName(TLD_TAB);
+    if (!sheet || sheet.getRange('A5').getDisplayValue().trim() !== 'IDEA_TEST')
+      throw new Error('Wrong sheet or idea; stopped');
+    const gpt = sheet.getRange('C5').getDisplayValue().trim();
+    const previousGemini = sheet.getRange('D5').getDisplayValue().trim();
+    if (previousGemini) {
+      console.log(JSON.stringify({status:'SKIPPED_D5_ALREADY_FILLED', writes:0, model_calls:0}));
+      return;
+    }
+    if (!gpt) throw new Error('C5 is empty. No review possible');
+    const props = PropertiesService.getScriptProperties();
+    const key = props.getProperty('GEMINI_API_KEY');
+    if (!key) throw new Error('Missing GEMINI_API_KEY');
+    const model = props.getProperty('GEMINI_MODEL') || 'gemini-3.5-flash-lite';
+    if (!/^[A-Za-z0-9._-]+$/.test(model)) throw new Error('Invalid model');
+    const prompt = [
+      'You are an INDEPENDENT comedy script critic and rewriting editor for The Little Days.',
+      'Audience: US viewers; natural US English. Four fixed characters: FATHER, MOTHER, DAUGHTER (age ~2), DOG.',
+      'Do not claim you saw the source video or heard audio. You have ONLY a GPT text idea below.',
+      'Provide 3 concrete weaknesses with references to lines, beats or actions, why they hurt comedy or feasibility, and fixes.',
+      'Then write a distinctly improved, complete and filmable alternative with an immediate hook, clear setup and payoff.',
+      'Keep toddler acting/speech age-appropriate; retain all four characters and visual identity reference M5.',
+      'Do not invent source-video transcript, engagement metrics, or extra characters.',
+      'Return JSON with: weaknesses (array of {issue,impact,fix}), rewritten_idea (string), caveats (string).',
+      'Here is the GPT candidate:\n' + gpt
+    ].join('\n');
+    const url = 'https://generativelanguage.googleapis.com/v1beta/models/' +
+      encodeURIComponent(model) + ':generateContent';
+    const payload = {
+      contents:[{role:'user',parts:[{text:prompt}]}],
+      generationConfig:{temperature:0.45,maxOutputTokens:3000,
+        responseMimeType:'application/json'}
+    };
+    const res = UrlFetchApp.fetch(url,{
+      method:'post',contentType:'application/json',
+      headers:{'x-goog-api-key':key},payload:JSON.stringify(payload),
+      muteHttpExceptions:true
+    });
+    const status = res.getResponseCode();
+    if (status !== 200) {
+      console.log(JSON.stringify({status:'GEMINI_REVIEW_FAILED',http_status:status,model:model,writes:0}));
+      throw new Error('Gemini API returned HTTP ' + status);
+    }
+    const api = JSON.parse(res.getContentText());
+    const responseText = (((api.candidates||[])[0]||{}).content||{}).parts?.map(p=>p.text||'').join('')||'';
+    const parsed = JSON.parse(responseText);
+    if (!Array.isArray(parsed.weaknesses) || parsed.weaknesses.length < 3 ||
+        !parsed.weaknesses.every(w=>w.issue && w.impact && w.fix) ||
+        typeof parsed.rewritten_idea !== 'string' || parsed.rewritten_idea.trim().length < 300) {
+      throw new Error('Incomplete review. No Sheet write performed');
+    }
+    // Recheck contents immediately before writing (no destructive overwrite).
+    if (sheet.getRange('C5').getDisplayValue().trim() !== gpt ||
+        sheet.getRange('D5').getDisplayValue().trim()) {
+      throw new Error('C5/D5 changed during review. No write performed');
+    }
+    const critique = parsed.weaknesses.map((w,i)=>
+      (i+1)+'. '+w.issue+' | Impact: '+w.impact+' | Fix: '+w.fix).join('\n');
+    const draft = 'GEMINI CANDIDATE v1 — TEXT-ONLY REVIEW; VIDEO/AUDIO NOT VERIFIED\n\n' +
+      parsed.rewritten_idea.trim() + '\n\nCRITIQUE OF GPT VERSION:\n' +
+      critique + '\n\nLIMITATIONS: ' + (parsed.caveats || 'Source video/audio not independently verified.');
+    // Only touch D5; preserve T5 existing notes and admin/production columns.
+    sheet.getRange('D5').setValue(draft);
+    console.log(JSON.stringify({status:'GEMINI_REVIEW_SAVED_D5',
+      model:model,weaknesses:parsed.weaknesses.length,writes:1,model_calls:1,
+      text_only:true,quality_gate:'NOT_RUN'}));
+  } finally {
+    lock.releaseLock();
+  }
+}
