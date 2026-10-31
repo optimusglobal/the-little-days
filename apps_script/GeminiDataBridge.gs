@@ -39,3 +39,48 @@ function tldTestReadOnly() {
     writes: 0, model_calls: 0
   }));
 }
+
+/**
+ * Phase 2: one low-cost real Gemini API connection test.
+ * Does NOT submit idea/video, write cells, or create triggers.
+ * Configure GEMINI_MODEL in Script Properties to override the default.
+ */
+function tldTestGeminiApi() {
+  tldTestReadOnly();
+  const props = PropertiesService.getScriptProperties();
+  const key = props.getProperty('GEMINI_API_KEY');
+  const model = props.getProperty('GEMINI_MODEL') || 'gemini-3.5-flash-lite';
+  if (!/^[A-Za-z0-9._-]+$/.test(model)) throw new Error('Invalid GEMINI_MODEL');
+  const endpoint = 'https://generativelanguage.googleapis.com/v1beta/models/' +
+    encodeURIComponent(model) + ':generateContent';
+  const payload = {
+    contents: [{role: 'user', parts: [{text:
+      'Connectivity test only. Reply with exactly: TLD_GEMINI_OK'
+    }]}],
+    generationConfig: {maxOutputTokens: 64, temperature: 0}
+  };
+  const response = UrlFetchApp.fetch(endpoint, {
+    method: 'post',
+    contentType: 'application/json',
+    headers: {'x-goog-api-key': key},
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  });
+  const status = response.getResponseCode();
+  if (status !== 200) {
+    // Avoid logging response body or secrets.
+    console.log(JSON.stringify({status: 'GEMINI_API_FAILED', http_status: status, model: model}));
+    throw new Error('Gemini API connection failed; HTTP ' + status);
+  }
+  const body = JSON.parse(response.getContentText());
+  const parts = ((body.candidates || [])[0] || {}).content?.parts || [];
+  const text = parts.map(part => part.text || '').join('').trim();
+  if (!text.includes('TLD_GEMINI_OK')) throw new Error('Gemini returned an unexpected response');
+  console.log(JSON.stringify({
+    status: 'GEMINI_API_OK',
+    model: model,
+    returned_marker: true,
+    writes: 0,
+    model_calls: 1
+  }));
+}
