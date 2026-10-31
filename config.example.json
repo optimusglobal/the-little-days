@@ -1,18 +1,21 @@
 {
-  "spreadsheet_id": "1MfErcyvRQSWS7kABIyq3_ljzI1keZ4HRl1Ngh3n-Cag",
+  "spreadsheet_id": "1I09Na3kPwDtUsW6wlzYtbjwy9iNtZAcLOVDE4g6FJKM",
   "tab": "01_SAN_XUAT",
   "header_row": 4,
   "headers": {
-    "idea": "Idea mới",
+    "idea_gpt": "Idea GPT",
+    "idea_gemini": "Idea Gemini",
     "hook": "Ý tưởng / Hook",
     "insight": "Insight",
     "angle": "Proposed Angle — US",
     "script": "Kịch bản / Storyboard",
     "frame": "Frame 0",
-    "prompt": "Prompt video",
+    "prompt": "Prompt video canonical",
     "reference": "Ảnh tham chiếu",
-    "service": "AI tạo video",
-    "mode": "Chế độ / điểm dừng"
+    "service": "Provider video",
+    "mode": "Điểm dừng"
   },
-  "workers": {}
+  "workers": {},
+  "schema_version": "tld-sheet-v1.3",
+  "canonical_reference_cell": "M5"
 }
