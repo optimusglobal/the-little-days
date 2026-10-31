@@ -86,3 +86,17 @@ For IDEA_TEST, the owner-selected candidate for FINAL QC is v3.2, documented in 
 **Frame 0 acceptance:** all four characters recognizable as M5; contextually appropriate wardrobe; exact scene blocking, mood and 9:16 layout; appropriate body language; no added props/people; no continuity mistakes. Preserve the approved storyboard dialogue without shortening to force duration. Prompt language US English; idea descriptions/review in Vietnamese. Keep M5 unchanged.
 
 **IDEA_TEST / GOOD BOY, DAD!:** morning doorway scene. Father comfortable casual morning clothes, Mother relaxed homewear, Daughter age-appropriate comfortable morning outfit; dress/garments should be intentionally different from M5 clothing, but their identity must match M5. Brown Dachshund retains blue collar. Frame 0 should show the beginning of Scene 1, before the father's goodbye action, with mother, toddler and dog all spatially coherent. Do not produce a Frame 0 or render merely because this policy was recorded.
+
+## Series-wide Voice Identity Lock — owner directive, 2026-10-31
+
+FATHER, MOTHER, DAUGHTER have distinct, stable voice identities across **all** episodes and all shots. Dog has no human speech unless a specific approved idea explicitly requires it. A per-prompt instruction such as "adult male voice" or "toddler voice" is NOT a verifiable voice lock.
+
+Create an immutable **VOICE_REGISTRY** before production that contains for each speaking character: character_id, immutable voice_id/provider_voice_id (where available), approved voice sample asset reference and checksum, locale/accent (natural US English), vocal age/range, pitch/timbre/speaking rhythm, allowed emotion/prosody variation, voice_registry_version and owner approval. Keep samples private in Drive; never put voice audio, secrets or personal recordings in GitHub. If a provider cannot accept/reference a fixed voice ID or voice sample, mark voice_lock_verified=false and route to a controlled post-production voice/lip-sync pipeline or obtain owner approval for an exception. Never promise exact identical voices from prompt wording alone.
+
+Speaker Lock: each script line gets unique utterance_id + character_id + exact dialogue + time budget. No assigning another character's line, no multi-character simultaneous lip-sync; nonspeaking characters do not mouth dialogue. Mother may LAUGH as nonverbal audio without becoming a dialogue speaker; use the same Mother voice identity for such vocalizations when possible. Never reassign the punchline "Good boy, Daddy!" away from DAUGHTER.
+
+Quality Gate before render requires:
+- Character identity M5 and approved Frame 0, outfit/scene continuity.
+- Voice registry entries for all speaking characters (including Mother if she laughs), owner-approved samples/voice IDs and provider capability or a verified post-dub plan.
+- Gemini independently critiques GPT's **video prompt** for speaker confusion, voice consistency, lip-sync, dog-kiss visibility, 10-second feasibility, final comedic beat, and absence of subtitles.
+- Preserve GPT prompt and Gemini critique/rewrite separately; no assumption Gemini is superior. A missing verified voice-lock mechanism blocks production, not general prompt drafting.
