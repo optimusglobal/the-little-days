@@ -717,7 +717,7 @@ function tldGeminiReviewVideoPromptIdeaTestV2() {
     if(lg.getRange('A21').getDisplayValue()!=='idea-test-action-first-v2-gpt')
       throw new Error('GPT prompt journal key mismatch');
     const gpt=lg.getRange('L21').getDisplayValue();
-    if(!gpt.includes('ACTION_BLUEPRINT_REF')||!gpt.includes('Good boy, Daddy!')) throw new Error('Action-First v2 prompt missing');
+    if(!gpt.includes('GPT ACTION-FIRST V2') || !gpt.includes('Good boy, Daddy!') || !gpt.includes('Oh, you too?') || !gpt.includes('Him too?') || !gpt.includes('KISSES THE TOP OF DOG')) throw new Error('Action-First v2 prompt failed content check');
     const props=PropertiesService.getScriptProperties();
     const key=props.getProperty('GEMINI_API_KEY');
     const model=props.getProperty('GEMINI_MODEL')||'gemini-3.5-flash-lite';
