@@ -1,0 +1,2 @@
+# IDEA_TEST Grok 15s V2
+Status: GPT revised draft, pending independent Gemini QC. Keep M5, N5, all seven dialogue lines and all three kisses. Improve timing, merge transitions into speaking beats, delay the mother's laugh until after the daughter's punchline. Voice consistency is prompt-based and unverified. Do not render.
