@@ -1034,7 +1034,7 @@ function tldGeminiReviewGrok15sIdeaTestV2() {
       'and DAUGHTER across ALL episodes. Generic voice descriptions are insufficient.',
       'No approved VOICE_REGISTRY, provider voice IDs, or voice samples are provided here.',
       'Therefore explicitly flag missing voice lock as a production blocker.',
-      'Audit exact speaker ownership, lip sync, Mother laughter (nonverbal), 10-second feasibility,',
+      'Audit exact speaker ownership, lip sync, Mother laughter (nonverbal), 15-second feasibility,',
       'DOG kiss visibility, character and wardrobe continuity, no subtitles, and comedy payoff.',
       'Identify at least three concrete weaknesses with severity, impact and correction.',
       'Produce an improved ENGLISH prompt for a 15-second single clip ONLY if plausible;',
