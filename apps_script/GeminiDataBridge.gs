@@ -497,3 +497,49 @@ function tldRunAudioQcIdeaTest() {
       model_calls:1,sheet_writes:0,quality_gate:'BLOCKED'}));
   }finally{lock.releaseLock();}
 }
+
+/**
+ * Bounded Creative Quality Gate v1 (pure policy, no provider/API calls).
+ * SELECT means candidate for OWNER REVIEW, never a render authorization.
+ * Hard blockers fail closed. At revision >= 2, no further revisions allowed.
+ */
+function tldDecideBoundedQualityGate(input) {
+  if (!input || !Number.isInteger(input.revisionRounds) ||
+      input.revisionRounds < 0 || !Array.isArray(input.candidates))
+    throw new Error('Invalid quality gate input');
+  const maxRevisions=2;
+  const eligible=input.candidates.filter(c=>
+    c && ['GPT','GEMINI','V3_2'].includes(c.id) &&
+    Number.isFinite(c.score) && c.score>=0 && c.score<=100 &&
+    c.hardConstraintsPass===true && c.evidenceSufficient===true);
+  const winner=eligible.sort((a,b)=>b.score-a.score)[0];
+  if(winner && winner.score>=85) return {
+    decision:'SELECT',candidate:winner.id,
+    status:'READY_FOR_OWNER_REVIEW',renderAllowed:false,revisionAllowed:false
+  };
+  if(input.revisionRounds>=maxRevisions) return {
+    decision:'REJECT',candidate:null,status:'REJECTED',
+    renderAllowed:false,revisionAllowed:false
+  };
+  return {decision:'REVISE',candidate:null,status:'NEEDS_REVISION',
+    renderAllowed:false,revisionAllowed:true,
+    remainingRounds:maxRevisions-input.revisionRounds};
+}
+/** Local policy test: zero network calls and zero Sheet writes. */
+function tldTestBoundedQualityGate() {
+  const scenarios=[
+    [{revisionRounds:0,candidates:[{id:'GPT',score:90,hardConstraintsPass:true,evidenceSufficient:true},
+      {id:'GEMINI',score:86,hardConstraintsPass:true,evidenceSufficient:true}]},'SELECT','GPT'],
+    [{revisionRounds:1,candidates:[{id:'GEMINI',score:98,hardConstraintsPass:false,evidenceSufficient:true}]},'REVISE',null],
+    [{revisionRounds:2,candidates:[{id:'GPT',score:80,hardConstraintsPass:true,evidenceSufficient:true}]},'REJECT',null],
+    [{revisionRounds:2,candidates:[{id:'V3_2',score:86,hardConstraintsPass:true,evidenceSufficient:true}]},'SELECT','V3_2'],
+    [{revisionRounds:0,candidates:[{id:'GPT',score:99,hardConstraintsPass:true,evidenceSufficient:false}]},'REVISE',null]
+  ];
+  scenarios.forEach(([input,expected,id])=>{
+    const actual=tldDecideBoundedQualityGate(input);
+    if(actual.decision!==expected || actual.candidate!==id || actual.renderAllowed)
+      throw new Error('QC scenario failed: '+expected);
+  });
+  console.log(JSON.stringify({status:'BOUNDED_QC_POLICY_OK',
+    scenarios:scenarios.length,model_calls:0,sheet_writes:0,render_calls:0}));
+}
