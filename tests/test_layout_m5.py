@@ -6,7 +6,7 @@ from workflow_v2.layout import validate
 
 class LayoutM5Tests(unittest.TestCase):
     def setUp(self):
-        self.contract = json.loads((Path(__file__).parents[1] / 'workflow_v2/layout.contract.json').read_text())
+        self.contract = json.loads((Path(__file__).parents[1] / 'workflow_v2/layout.contract.json').read_text(encoding='utf-8'))
         ref = self.contract['canonical_reference']
         row = [''] * 32
         row[0:2] = ['IDEA_TEST', 'https://drive.google.com/file/d/source/view']
